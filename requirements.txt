@@ -1,0 +1,1 @@
+git+git://github.com/canonical/operator@0108397b3eff0f6e1c1efef25bb143d8c508945d#egg=ops
