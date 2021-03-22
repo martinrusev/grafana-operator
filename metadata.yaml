@@ -21,6 +21,9 @@ containers:
   grafana:
     systems:
       - resource: grafana-image
+    mounts:
+      - storage: sqlitedb
+        location: /var/lib/grafana
 provides:
   grafana-source:
     interface: grafana-datasource
