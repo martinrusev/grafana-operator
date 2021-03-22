@@ -29,4 +29,4 @@ operator behaviour without full deployment. Just `run_tests`:
 
 
     charmcraft build
-    juju deploy ./grafana.charm --resource grafana-image=grafana:7.4.5
+    juju deploy ./grafana.charm --resource grafana-image=grafana/grafana:7.4.5

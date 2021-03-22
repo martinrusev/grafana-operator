@@ -27,19 +27,21 @@ class GrafanaOperator(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.framework.observe(
-            self.on.grafana_workload_ready, self._on_grafana_workload_ready
+            self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
         )
         self._stored.set_default(
-            grafana_workload_ready=False,
+            grafana_pebble_ready=False,
             grafana_started=False,
         )
 
-    def _on_grafana_workload_ready(self, event):
-        logger.info("_on_grafana_workload_ready")
-        self._stored.grafana_workload_ready = True
+    def _on_grafana_pebble_ready(self, event):
+        logger.info("_on_grafana_pebble_ready")
+        self._stored.grafana_pebble_ready = True
         self._start_grafana()
 
     def _grafana_layer(self):
+        config = self.model.config
+
         layer = {
             'summary': 'grafana layer',
             'description': 'grafana layer',
@@ -48,7 +50,11 @@ class GrafanaOperator(CharmBase):
                     'override': 'replace',
                     'summary': 'grafana service',
                     'command': 'grafana',
-                    'default': 'start'
+                    'default': 'start',
+                    'environment': {
+                        'HTTP_PORT': config["port"],
+                        'LOG_LEVEL': config["grafana_log_level"]
+                    }
                 }
             }}
 
