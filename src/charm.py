@@ -97,7 +97,6 @@ class GrafanaOperator(CharmBase):
                 if value is not None
             }
         )
-        self.configure_pod()
 
     def on_database_broken(self, _):
         """Removes database connection info from datastore.
@@ -111,13 +110,29 @@ class GrafanaOperator(CharmBase):
         # remove the existing database info from datastore
         self.datastore.database = dict()
 
-        # set pod spec because datastore config has changed
-        self.configure_pod()
-
     def _on_grafana_pebble_ready(self, event):
         logger.info("_on_grafana_pebble_ready")
         self._stored.grafana_pebble_ready = True
         self._start_grafana()
+
+    def _database_config_dict(self):
+        db_config = config.get("database", {})
+        db_env_dict = {
+            'DATABASE_TYPE': db_config.get("type"),
+            'DATABASE_HOST': db_config.get("host"),
+            'DATABASE_NAME': db_config.get("name"),
+            'DATABASE_USER': db_config.get("user"),
+            'DATABASE_PASSWORD': db_config.get("password"),
+            'DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
+                db_config.get("type"),
+                db_config.get("host"),
+                db_config.get("name"),
+                db_config.get("user"),
+                db_config.get("password"),
+            )
+        }
+
+        return db_env_dict
 
     def _grafana_layer(self):
         config = self.model.config
