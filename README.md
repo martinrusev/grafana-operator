@@ -2,7 +2,7 @@
 
 ## Description
 
-TODO: Describe your charm in a few paragraphs of Markdown
+This is the Grafana charm for Kubernetes using the Operator Framework and Pebble.
 
 ## Usage
 
@@ -23,3 +23,10 @@ The Python operator framework includes a very nice harness for testing
 operator behaviour without full deployment. Just `run_tests`:
 
     ./run_tests
+
+
+## Deploying
+
+
+    charmcraft build
+    juju deploy ./grafana.charm --resource grafana-image=grafana:7.4.5

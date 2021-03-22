@@ -39,6 +39,21 @@ class GrafanaOperator(CharmBase):
         self._stored.grafana_workload_ready = True
         self._start_grafana()
 
+    def _grafana_layer(self):
+        layer = {
+            'summary': 'grafana layer',
+            'description': 'grafana layer',
+            'services': {
+                'grafana': {
+                    'override': 'replace',
+                    'summary': 'grafana service',
+                    'command': 'grafana',
+                    'default': 'start'
+                }
+            }}
+
+        return layer
+
     def _start_grafana(self):
         logger.info("_start_grafana")
         if self._stored.grafana_started:
@@ -47,16 +62,7 @@ class GrafanaOperator(CharmBase):
         container = self.unit.containers["grafana"]
         container.add_layer(
             "grafana",
-            """
-summary: grafana layer
-description: grafana layer
-services:
-    grafana:
-        override: replace
-        summary: grafana service
-        command: grafana
-        default: start
-""",
+            self._grafana_layer()
         )
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")

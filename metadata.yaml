@@ -1,28 +1,41 @@
 name: grafana
 description: |
-    Grafana provides dashboards for monitoring data and this
-    charm is written to allow for HA on Kubernetes and can take
-    multiple data sources (for example, Prometheus).
+  Grafana provides dashboards for monitoring data and this
+  charm is written to allow for HA on Kubernetes and can take
+  multiple data sources (for example, Prometheus).
 summary:  Data visualization and observability with Grafana
-min-juju-version: 2.9.0
+tags:
+  - grafana
+  - prometheus
+  - monitoring
+  - observability
 platforms:
   - kubernetes
+# To appease CharmHub (for now)
+series:
+  - focal
 systems:
   - os: ubuntu
     channel: 20.04/stable
-
 containers:
   grafana:
     systems:
       - resource: grafana-image
-
+provides:
+  grafana-source:
+    interface: grafana-datasource
+  grafana-dashboard:
+    interface: grafana-dash
+peers:
+  grafana:
+    interface: grafana-peers
+storage:
+  sqlitedb:
+    type: filesystem
+    location: /var/lib/grafana
 resources:
   grafana-image:
     type: oci-image
     description: Docker image for Grafana
     auto-fetch: true
     upstream-source: 'grafana/grafana:7.4.5'
-
-# To appease CharmHub (for now)
-series:
-  - kubernetes
