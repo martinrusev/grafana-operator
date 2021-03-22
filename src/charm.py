@@ -117,22 +117,36 @@ class GrafanaOperator(CharmBase):
 
     def _database_config_dict(self):
         db_config = config.get("database", {})
-        db_env_dict = {
-            'DATABASE_TYPE': db_config.get("type"),
-            'DATABASE_HOST': db_config.get("host"),
-            'DATABASE_NAME': db_config.get("name"),
-            'DATABASE_USER': db_config.get("user"),
-            'DATABASE_PASSWORD': db_config.get("password"),
-            'DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
-                db_config.get("type"),
-                db_config.get("host"),
-                db_config.get("name"),
-                db_config.get("user"),
-                db_config.get("password"),
-            )
-        }
 
-        return db_env_dict
+        layer = {
+            'summary': 'grafana layer',
+            'description': 'grafana layer',
+            'services': {
+                'grafana': {
+                    'override': 'replace',
+                    'summary': 'grafana service',
+                    'command': 'grafana',
+                    'default': 'start',
+                    'environment': {
+                        'DATABASE_TYPE': db_config.get("type"),
+                        'DATABASE_HOST': db_config.get("host"),
+                        'DATABASE_NAME': db_config.get("name"),
+                        'DATABASE_USER': db_config.get("user"),
+                        'DATABASE_PASSWORD': db_config.get("password"),
+                        'DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
+                            db_config.get("type"),
+                            db_config.get("host"),
+                            db_config.get("name"),
+                            db_config.get("user"),
+                            db_config.get("password"))
+                    }
+                }
+            }}
+        container = self.unit.containers["grafana"]
+        container.add_layer("grafana", layer)
+
+        container.stop()
+        container.start()
 
     def _grafana_layer(self):
         config = self.model.config
