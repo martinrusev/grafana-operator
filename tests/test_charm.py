@@ -1,35 +1,65 @@
-# Copyright 2021 Minikube
-# See LICENSE file for licensing details.
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import unittest
-from unittest.mock import Mock
 
+# from ops.model import (
+#     TooManyRelatedAppsError
+# )
 from ops.testing import Harness
-from charm import GrafanaOperatorCharm
+from charm import GrafanaOperator
 
 
-class TestCharm(unittest.TestCase):
-    def test_config_changed(self):
-        harness = Harness(GrafanaOperatorCharm)
-        self.addCleanup(harness.cleanup)
-        harness.begin()
-        self.assertEqual(list(harness.charm._stored.things), [])
-        harness.update_config({"thing": "foo"})
-        self.assertEqual(list(harness.charm._stored.things), ["foo"])
+BASE_CONFIG = {
+    'port': 3000,
+    'grafana_log_level': 'info',
+}
 
-    def test_action(self):
-        harness = Harness(GrafanaOperatorCharm)
-        harness.begin()
-        # the harness doesn't (yet!) help much with actions themselves
-        action_event = Mock(params={"fail": ""})
-        harness.charm._on_fortune_action(action_event)
 
-        self.assertTrue(action_event.set_results.called)
+class GrafanaCharmTest(unittest.TestCase):
 
-    def test_action_fail(self):
-        harness = Harness(GrafanaOperatorCharm)
-        harness.begin()
-        action_event = Mock(params={"fail": "fail this"})
-        harness.charm._on_fortune_action(action_event)
+    def setUp(self) -> None:
+        self.harness = Harness(GrafanaOperator)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.harness.add_oci_resource('grafana-image')
 
-        self.assertEqual(action_event.fail.call_args, [("fail this",)])
+    def test__database_relation_data(self):
+        self.harness.set_leader(True)
+        self.harness.update_config(BASE_CONFIG)
+        self.assertEqual(self.harness.charm.datastore.database, {})
+
+        # add relation and update relation data
+        rel_id = self.harness.add_relation('database', 'mysql')
+        rel = self.harness.model.get_relation('database')
+        self.harness.add_relation_unit(rel_id, 'mysql/0')
+        test_relation_data = {
+            'type': 'mysql',
+            'host': '0.1.2.3:3306',
+            'name': 'my-test-db',
+            'user': 'test-user',
+            'password': 'super!secret!password',
+        }
+        self.harness.update_relation_data(rel_id,
+                                          'mysql/0',
+                                          test_relation_data)
+        # check that charm datastore was properly set
+        self.assertEqual(dict(self.harness.charm.datastore.database),
+                         test_relation_data)
+
+        # now depart this relation and ensure the datastore is emptied
+        self.harness.charm.on.database_relation_broken.emit(rel)
+        self.assertEqual({}, dict(self.harness.charm.datastore.database))
+
+    # def test__multiple_database_relation_handling(self):
+    #     self.harness.set_leader(True)
+    #     self.harness.update_config(BASE_CONFIG)
+    #     self.assertEqual(self.harness.charm.datastore.database, {})
+
+    #     # add first database relation
+    #     self.harness.add_relation('database', 'mysql')
+
+    #     # add second database relation -- should fail here
+    #     with self.assertRaises(TooManyRelatedAppsError):
+    #         self.harness.add_relation('database', 'mysql')
+    #         self.harness.charm.model.get_relation('database')

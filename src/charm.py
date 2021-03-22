@@ -11,6 +11,16 @@ from ops.model import ActiveStatus
 
 logger = logging.getLogger(__name__)
 
+REQUIRED_DATABASE_FIELDS = {
+    "type",  # mysql, postgres or sqlite3 (sqlite3 doesn't work for HA)
+    "host",  # in the form '<url_or_ip>:<port>', e.g. 127.0.0.1:3306
+    "name",
+    "user",
+    "password",
+}
+
+VALID_DATABASE_TYPES = {"mysql", "postgres", "sqlite3"}
+
 
 class GrafanaOperator(CharmBase):
     """Charm to run Grafana on Kubernetes.
@@ -29,10 +39,80 @@ class GrafanaOperator(CharmBase):
         self.framework.observe(
             self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
         )
+
+        # -- database relation observations
+        self.framework.observe(
+            self.on["database"].relation_changed, self.on_database_changed
+        )
+        self.framework.observe(
+            self.on["database"].relation_broken, self.on_database_broken
+        )
         self._stored.set_default(
             grafana_pebble_ready=False,
             grafana_started=False,
         )
+        self.datastore.set_default(database=dict())  # db configuration
+
+    def on_database_changed(self, event):
+        """Sets configuration information for database connection."""
+        if not self.unit.is_leader():
+            return
+
+        if event.unit is None:
+            logger.warning("event unit can't be None when setting db config.")
+            return
+
+        # save the necessary configuration of this database connection
+        database_fields = {
+            field: event.relation.data[event.unit].get(field)
+            for field in REQUIRED_DATABASE_FIELDS
+        }
+
+        # if any required fields are missing, warn the user and return
+        missing_fields = [
+            field
+            for field in REQUIRED_DATABASE_FIELDS
+            if database_fields.get(field) is None
+        ]
+        if len(missing_fields) > 0:
+            logger.error(
+                "Missing required data fields for related database "
+                "relation: {}".format(missing_fields)
+            )
+            return
+
+        # check if the passed database type is not in VALID_DATABASE_TYPES
+        if database_fields["type"] not in VALID_DATABASE_TYPES:
+            logger.error(
+                "Grafana can only accept databases of the following "
+                "types: {}".format(VALID_DATABASE_TYPES)
+            )
+            return
+
+        # add the new database relation data to the datastore
+        self.datastore.database.update(
+            {
+                field: value
+                for field, value in database_fields.items()
+                if value is not None
+            }
+        )
+        self.configure_pod()
+
+    def on_database_broken(self, _):
+        """Removes database connection info from datastore.
+
+        We are guaranteed to only have one DB connection, so clearing
+        datastore.database is all we need for the change to be propagated
+        to the pod spec."""
+        if not self.unit.is_leader():
+            return
+
+        # remove the existing database info from datastore
+        self.datastore.database = dict()
+
+        # set pod spec because datastore config has changed
+        self.configure_pod()
 
     def _on_grafana_pebble_ready(self, event):
         logger.info("_on_grafana_pebble_ready")
