@@ -123,10 +123,7 @@ class GrafanaOperator(CharmBase):
             'description': 'grafana layer',
             'services': {
                 'grafana': {
-                    'override': 'replace',
-                    'summary': 'grafana service',
-                    'command': 'grafana',
-                    'default': 'start',
+                    'override': 'merge',
                     'environment': {
                         'DATABASE_TYPE': db_config.get("type"),
                         'DATABASE_HOST': db_config.get("host"),
