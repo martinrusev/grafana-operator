@@ -15,6 +15,9 @@ BASE_CONFIG = {
     'grafana_log_level': 'info',
 }
 
+# At the moment, the test suite raises an error, due to  https://github.com/canonical/operator/blob/master/ops/testing.py#L838
+#    raise NotImplementedError(self.get_pebble)
+
 
 class GrafanaCharmTest(unittest.TestCase):
 
