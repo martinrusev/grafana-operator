@@ -157,7 +157,7 @@ class GrafanaOperator(CharmBase):
                 'grafana': {
                     'override': 'replace',
                     'summary': 'grafana service',
-                    'command': 'grafana',
+                    'command': 'grafana-server > grafana.log',
                     'default': 'start',
                     'environment': [
                         {'HTTP_PORT': config["port"]},
