@@ -31,13 +31,22 @@ grafana/0*  active    idle   10.1.243.208         grafana started
 
 Visit that IP address at port 3000 in your browser and you should see the Grafana web UI. For example, http://10.1.243.208:3000/
 
+Next, we need to add a database:
+
+```
+juju deploy cs:~charmed-osm/mariadb-k8s-35
+
+```
+
 ## Developing
 
 Create and activate a virtualenv with the development requirements:
 
+```
     virtualenv -p python3 venv
     source venv/bin/activate
     pip install -r requirements-dev.txt
+```
 
 ## Testing
 

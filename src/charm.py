@@ -16,6 +16,20 @@ from ops.pebble import ServiceInfo, ServiceStatus
 
 logger = logging.getLogger(__name__)
 
+
+# These are the required and optional relation data fields
+# In other words, when relating to this charm, these are the fields
+# that will be processed by this charm.
+REQUIRED_DATASOURCE_FIELDS = {
+    "private-address",  # the hostname/IP of the data source server
+    "port",  # the port of the data source server
+    "source-type",  # the data source type (e.g. prometheus)
+}
+
+OPTIONAL_DATASOURCE_FIELDS = {
+    "source-name",  # a human-readable name of the source
+}
+
 REQUIRED_DATABASE_FIELDS = {
     "type",  # mysql, postgres or sqlite3 (sqlite3 doesn't work for HA)
     "host",  # in the form '<url_or_ip>:<port>', e.g. 127.0.0.1:3306
@@ -53,6 +67,23 @@ class GrafanaOperator(CharmBase):
         self.framework.observe(
             self.on["database"].relation_broken, self.on_database_broken
         )
+
+        # -- grafana-source relation observations
+        self.framework.observe(
+            self.on["grafana-source"].relation_changed, self.on_grafana_source_changed
+        )
+        self.framework.observe(
+            self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
+        )
+
+        # -- grafana (peer) relation observations
+        self.framework.observe(
+            self.on["grafana"].relation_changed, self.on_peer_changed
+        )
+
+        self.datastore.set_default(sources=dict())  # available data sources
+        self.datastore.set_default(source_names=set())  # unique source names
+        self.datastore.set_default(sources_to_delete=set())
         self._stored.set_default(database=dict())  # db configuration
 
     def on_database_changed(self, event):
@@ -111,6 +142,93 @@ class GrafanaOperator(CharmBase):
 
         # remove the existing database info from datastore
         self._stored.database = dict()
+
+        # TODO - Update Pebble - stop the service, remove the DB credentials?
+
+    def on_grafana_source_changed(self, event):
+        """Get relation data for Grafana source.
+
+        This event handler (if the unit is the leader) will get data for
+        an incoming grafana-source relation and make the relation data
+        is available in the app's datastore object (StoredState).
+        """
+        # if this unit is the leader, set the required data
+        # of the grafana-source in this charm's datastore
+        if not self.unit.is_leader():
+            return
+
+        # if there is no available unit, remove data-source info if it exists
+        if event.unit is None:
+            logger.warning("event unit can't be None when setting data sources.")
+            return
+
+        # dictionary of all the required/optional datasource field values
+        # using this as a more generic way of getting data source fields
+        datasource_fields = {
+            field: event.relation.data[event.unit].get(field)
+            for field in REQUIRED_DATASOURCE_FIELDS | OPTIONAL_DATASOURCE_FIELDS
+        }
+
+        missing_fields = [
+            field
+            for field in REQUIRED_DATASOURCE_FIELDS
+            if datasource_fields.get(field) is None
+        ]
+        # check the relation data for missing required fields
+        if len(missing_fields) > 0:
+            log.error(
+                "Missing required data fields for grafana-source "
+                "relation: {}".format(missing_fields)
+            )
+            self._remove_source_from_datastore(event.relation.id)
+            return
+
+        # specifically handle optional fields if necessary
+        # check if source-name was not passed or if we have already saved the provided name
+        if (
+            datasource_fields["source-name"] is None or
+            datasource_fields["source-name"] in self.datastore.source_names
+        ):
+            default_source_name = "{}_{}".format(event.app.name, event.relation.id)
+            log.warning(
+                "No name 'grafana-source' or provided name is already in use. "
+                "Using safe default: {}.".format(default_source_name)
+            )
+            datasource_fields["source-name"] = default_source_name
+
+        self._stored.source_names.add(datasource_fields["source-name"])
+
+        # set the first grafana-source as the default (needed for pod config)
+        # if `self.datastore.sources` is currently empty, this is the first
+        datasource_fields["isDefault"] = "false"
+        if not dict(self.datastore.sources):
+            datasource_fields["isDefault"] = "true"
+
+        # add unit name so the source can be removed might be a
+        # duplicate of 'source-name', but this will guarantee lookup
+        datasource_fields["unit_name"] = event.unit.name
+
+        # add the new datasource relation data to the current state
+        new_source_data = {
+            field: value
+            for field, value in datasource_fields.items()
+            if value is not None
+        }
+        self._stored.sources.update({event.relation.id: new_source_data})
+
+    def _datasource_file(self):
+        for rel_id, source_info in self.datastore.sources.items():
+            source = {
+                'orgId': '1',
+                'access': 'proxy',
+                'httpMethod': 'POST',
+                'isDefault': source_info["isDefault"],
+                'name': source_info["source-name"],
+                'type': source_info["source-type"],
+                'url': "http://{}:{}".format(source_info["private-address"], source_info["port"])
+            }
+
+        # TODO - Create the YAML file and save it
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
         container = event.workload
