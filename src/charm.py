@@ -3,12 +3,16 @@
 
 import logging
 from uuid import uuid4
-
-from ops.charm import CharmBase
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    ConfigChangedEvent,
+    PebbleReadyEvent
+)
 from ops.main import main
 from ops.framework import StoredState
-from ops.model import ActiveStatus
-
+from ops.model import ActiveStatus, BlockedStatus
+from ops.pebble import ServiceInfo, ServiceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,7 @@ class GrafanaOperator(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
         self.framework.observe(
             self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
         )
@@ -47,10 +52,6 @@ class GrafanaOperator(CharmBase):
         )
         self.framework.observe(
             self.on["database"].relation_broken, self.on_database_broken
-        )
-        self._stored.set_default(
-            grafana_pebble_ready=False,
-            grafana_started=False,
         )
         self._stored.set_default(database=dict())  # db configuration
 
@@ -111,10 +112,26 @@ class GrafanaOperator(CharmBase):
         # remove the existing database info from datastore
         self._stored.database = dict()
 
-    def _on_grafana_pebble_ready(self, event):
+    def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        container = event.workload
         logger.info("_on_grafana_pebble_ready")
-        self._stored.grafana_pebble_ready = True
-        self._start_grafana()
+
+        # Check we can get a list of services back from the Pebble API
+        if container.get_services():
+            # Fetch the service, if it is already running, then return
+            status = container.get_service("grafana")
+            if status.current == ServiceStatus.ACTIVE:
+                logger.info("grafana already started")
+                return
+
+        logger.info("_start_grafana")
+        container.add_layer(
+            "grafana",
+            self._grafana_layer(),
+            True
+        )
+        container.autostart()
+        self.unit.status = ActiveStatus("grafana started")
 
     def _database_config_dict(self):
         db_config = config.get("database", {})
@@ -141,8 +158,7 @@ class GrafanaOperator(CharmBase):
                 }
             }}
         container = self.unit.containers["grafana"]
-        layer_name = f"grafana-{uuid4()}"
-        container.add_layer(layer_name, layer)
+        container.add_layer("grafana", layer, True)
 
         container.stop()
         container.start()
@@ -167,21 +183,6 @@ class GrafanaOperator(CharmBase):
             }}
 
         return layer
-
-    def _start_grafana(self):
-        logger.info("_start_grafana")
-        if self._stored.grafana_started:
-            logger.info("grafana already started")
-            return
-        container = self.unit.containers["grafana"]
-        layer_name = f"grafana-{uuid4()}"
-        container.add_layer(
-            layer_name,
-            self._grafana_layer()
-        )
-        container.autostart()
-        self.unit.status = ActiveStatus("grafana started")
-        self._stored.grafana_started = True
 
 
 if __name__ == "__main__":
