@@ -11,16 +11,12 @@ tags:
   - observability
 platforms:
   - kubernetes
-# To appease CharmHub (for now)
-series:
-  - focal
-systems:
+bases:
   - os: ubuntu
     channel: 20.04/stable
 containers:
   grafana:
-    systems:
-      - resource: grafana-image
+    resource: grafana-image
     mounts:
       - storage: sqlitedb
         location: /var/lib/grafana
