@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from uuid import uuid4
 
 from ops.charm import CharmBase
 from ops.main import main
@@ -140,7 +141,8 @@ class GrafanaOperator(CharmBase):
                 }
             }}
         container = self.unit.containers["grafana"]
-        container.add_layer("grafana", layer)
+        layer_name = f"grafana-{uuid4()}"
+        container.add_layer(layer_name, layer)
 
         container.stop()
         container.start()
@@ -172,8 +174,9 @@ class GrafanaOperator(CharmBase):
             logger.info("grafana already started")
             return
         container = self.unit.containers["grafana"]
+        layer_name = f"grafana-{uuid4()}"
         container.add_layer(
-            "grafana",
+            layer_name,
             self._grafana_layer()
         )
         container.autostart()
