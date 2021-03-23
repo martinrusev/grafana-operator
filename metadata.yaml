@@ -12,7 +12,7 @@ tags:
 platforms:
   - kubernetes
 bases:
-  - os: ubuntu
+  - name: ubuntu
     channel: 20.04/stable
 containers:
   grafana:

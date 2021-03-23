@@ -51,7 +51,7 @@ class GrafanaOperator(CharmBase):
             grafana_pebble_ready=False,
             grafana_started=False,
         )
-        self.datastore.set_default(database=dict())  # db configuration
+        self._stored.set_default(database=dict())  # db configuration
 
     def on_database_changed(self, event):
         """Sets configuration information for database connection."""
@@ -90,7 +90,7 @@ class GrafanaOperator(CharmBase):
             return
 
         # add the new database relation data to the datastore
-        self.datastore.database.update(
+        self._stored.database.update(
             {
                 field: value
                 for field, value in database_fields.items()
@@ -108,7 +108,7 @@ class GrafanaOperator(CharmBase):
             return
 
         # remove the existing database info from datastore
-        self.datastore.database = dict()
+        self._stored.database = dict()
 
     def _on_grafana_pebble_ready(self, event):
         logger.info("_on_grafana_pebble_ready")
@@ -157,10 +157,10 @@ class GrafanaOperator(CharmBase):
                     'summary': 'grafana service',
                     'command': 'grafana',
                     'default': 'start',
-                    'environment': {
-                        'HTTP_PORT': config["port"],
-                        'LOG_LEVEL': config["grafana_log_level"]
-                    }
+                    'environment': [
+                        {'HTTP_PORT': config["port"]},
+                        {'LOG_LEVEL': config["grafana_log_level"]}
+                    ]
                 }
             }}
 
