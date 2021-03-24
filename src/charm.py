@@ -3,6 +3,7 @@
 
 import logging
 import yaml
+import os
 from ops.charm import (
     CharmBase,
     PebbleReadyEvent
