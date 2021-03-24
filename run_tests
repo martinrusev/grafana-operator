@@ -12,6 +12,5 @@ else
     export PYTHONPATH="src:$PYTHONPATH"
 fi
 
-flake8
-coverage run --source=src -m unittest -v "$@"
-coverage report -m
+# flake8
+python3 -m unittest -v "$@"

@@ -2,17 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from uuid import uuid4
+import yaml
 from ops.charm import (
-    ActionEvent,
     CharmBase,
-    ConfigChangedEvent,
     PebbleReadyEvent
 )
 from ops.main import main
 from ops.framework import StoredState
-from ops.model import ActiveStatus, BlockedStatus
-from ops.pebble import ServiceInfo, ServiceStatus
+from ops.model import ActiveStatus
+from ops.pebble import ServiceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +37,8 @@ REQUIRED_DATABASE_FIELDS = {
 }
 
 VALID_DATABASE_TYPES = {"mysql", "postgres", "sqlite3"}
+
+PROVISIONING_PATH = "/etc/grafana/provisioning"
 
 
 class GrafanaOperator(CharmBase):
@@ -174,9 +174,10 @@ class GrafanaOperator(CharmBase):
             for field in REQUIRED_DATASOURCE_FIELDS
             if datasource_fields.get(field) is None
         ]
+
         # check the relation data for missing required fields
         if len(missing_fields) > 0:
-            log.error(
+            logger.error(
                 "Missing required data fields for grafana-source "
                 "relation: {}".format(missing_fields)
             )
@@ -190,7 +191,7 @@ class GrafanaOperator(CharmBase):
             datasource_fields["source-name"] in self.datastore.source_names
         ):
             default_source_name = "{}_{}".format(event.app.name, event.relation.id)
-            log.warning(
+            logger.warning(
                 "No name 'grafana-source' or provided name is already in use. "
                 "Using safe default: {}.".format(default_source_name)
             )
@@ -216,19 +217,44 @@ class GrafanaOperator(CharmBase):
         }
         self._stored.sources.update({event.relation.id: new_source_data})
 
-    def _datasource_file(self):
-        for rel_id, source_info in self.datastore.sources.items():
+    def _generate_datasource_config(self):
+        self._stored.sources.update({
+            "prometheus/0": {
+                'private-address': '192.0.2.1',
+                'port': 1234,
+                'source-type': 'prometheus',
+                'source-name': 'prometheus-app',
+                'isDefault': False
+            },
+            "jaeger/0": {
+                'private-address': '255.255.255.0',
+                'port': 7890,
+                'source-type': 'jaeger',
+                'source-name': 'jaeger-app',
+                'isDefault': False
+            }
+        })
+
+        datasources_dict = {
+            'apiVersion': 1,
+            'datasources': []
+        }
+
+        for _, source_info in self._stored.sources.items():
             source = {
                 'orgId': '1',
                 'access': 'proxy',
-                'httpMethod': 'POST',
                 'isDefault': source_info["isDefault"],
                 'name': source_info["source-name"],
                 'type': source_info["source-type"],
                 'url': "http://{}:{}".format(source_info["private-address"], source_info["port"])
             }
+            datasources_dict["datasources"].append(source)
 
-        # TODO - Create the YAML file and save it
+        logger.info(datasources_dict)
+        datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "sources.yaml")
+        with open(datasources_yaml, 'w') as file:
+            yaml.dump(datasources_dict, file)
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
         container = event.workload
@@ -242,6 +268,9 @@ class GrafanaOperator(CharmBase):
                 logger.info("grafana already started")
                 return
 
+        # TODO - temporary generate a relation yaml. Remove
+        self._generate_datasource_config()
+
         logger.info("_start_grafana")
         container.add_layer(
             "grafana",
@@ -252,7 +281,7 @@ class GrafanaOperator(CharmBase):
         self.unit.status = ActiveStatus("grafana started")
 
     def _database_config_dict(self):
-        db_config = config.get("database", {})
+        db_config = self.model.config.get("database", {})
 
         layer = {
             'summary': 'grafana layer',
