@@ -72,14 +72,9 @@ class GrafanaOperator(CharmBase):
         self.framework.observe(
             self.on["grafana-source"].relation_changed, self.on_grafana_source_changed
         )
-        self.framework.observe(
-            self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
-        )
-
-        # -- grafana (peer) relation observations
-        self.framework.observe(
-            self.on["grafana"].relation_changed, self.on_peer_changed
-        )
+        # self.framework.observe(
+        #     self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
+        # )
 
         self.datastore.set_default(sources=dict())  # available data sources
         self.datastore.set_default(source_names=set())  # unique source names
