@@ -76,9 +76,9 @@ class GrafanaOperator(CharmBase):
         #     self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
         # )
 
-        self.datastore.set_default(sources=dict())  # available data sources
-        self.datastore.set_default(source_names=set())  # unique source names
-        self.datastore.set_default(sources_to_delete=set())
+        self._stored.set_default(sources=dict())  # available data sources
+        self._stored.set_default(source_names=set())  # unique source names
+        self._stored.set_default(sources_to_delete=set())
         self._stored.set_default(database=dict())  # db configuration
 
     def on_database_changed(self, event):
