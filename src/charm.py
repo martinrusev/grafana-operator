@@ -258,7 +258,7 @@ class GrafanaOperator(CharmBase):
             datasources_dict["deleteDatasources"].append(source)
 
         # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
-        datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "sources.yaml")
+        datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "datasources.yaml")
         with open(datasources_yaml, 'w+') as file:
             yaml.dump(datasources_dict, file)
 
@@ -325,7 +325,7 @@ class GrafanaOperator(CharmBase):
                 'grafana': {
                     'override': 'replace',
                     'summary': 'grafana service',
-                    'command': 'grafana-server > /tmp/grafana.log',
+                    'command': 'grafana-server',
                     'default': 'start',
                     'environment': [
                         {'GF_HTTP_PORT': config["port"]},
