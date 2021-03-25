@@ -38,6 +38,13 @@ juju deploy cs:~charmed-osm/mariadb-k8s-35
 
 ```
 
+Adding a data source:
+
+```
+juju deploy cs:~charmcraft/prometheus-3
+juju relate grafana prometheus
+```
+
 ## Developing
 
 Create and activate a virtualenv with the development requirements:

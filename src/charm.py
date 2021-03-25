@@ -233,23 +233,6 @@ class GrafanaOperator(CharmBase):
             self._stored.sources_to_delete.add(removed_source["source-name"])
 
     def _generate_datasource_config(self):
-        # self._stored.sources.update({
-        #     "prometheus/0": {
-        #         'private-address': '192.0.2.1',
-        #         'port': 1234,
-        #         'source-type': 'prometheus',
-        #         'source-name': 'prometheus-app',
-        #         'isDefault': False
-        #     },
-        #     "jaeger/0": {
-        #         'private-address': '255.255.255.0',
-        #         'port': 7890,
-        #         'source-type': 'jaeger',
-        #         'source-name': 'jaeger-app',
-        #         'isDefault': False
-        #     }
-        # })
-
         datasources_dict = {
             'apiVersion': 1,
             'datasources': [],
@@ -274,16 +257,8 @@ class GrafanaOperator(CharmBase):
             }
             datasources_dict["deleteDatasources"].append(source)
 
-        datasource_dir = os.path.join(PROVISIONING_PATH, "datasources")
-
-        try:
-            os.mkdir(datasource_dir)
-        except OSError:
-            logger.error("Creation of the directory %s failed" % datasource_dir)
-        else:
-            logger.info("Successfully created the directory %s " % datasource_dir)
-
-        datasources_yaml = os.path.join(datasource_dir, "sources.yaml")
+        # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
+        datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "sources.yaml")
         with open(datasources_yaml, 'w+') as file:
             yaml.dump(datasources_dict, file)
 
@@ -299,7 +274,6 @@ class GrafanaOperator(CharmBase):
                 logger.info("grafana already started")
                 return
 
-        # TODO - temporary generate a relation yaml. Remove
         self._generate_datasource_config()
 
         logger.info("_start_grafana")
