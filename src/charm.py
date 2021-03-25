@@ -249,7 +249,7 @@ class GrafanaOperator(CharmBase):
 
         logger.info(datasources_dict)
         datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "sources.yaml")
-        with open(datasources_yaml, 'w') as file:
+        with open(datasources_yaml, 'w+') as file:
             yaml.dump(datasources_dict, file)
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
