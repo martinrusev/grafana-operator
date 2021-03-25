@@ -26,17 +26,9 @@ grafana           active      1  grafana  local             9  ubuntu           
 
 Unit        Workload  Agent  Address       Ports  Message
 grafana/0*  active    idle   10.1.243.208         grafana started
-
 ```
 
 Visit that IP address at port 3000 in your browser and you should see the Grafana web UI. For example, http://10.1.243.208:3000/
-
-Next, we need to add a database:
-
-```
-juju deploy cs:~charmed-osm/mariadb-k8s-35
-
-```
 
 Adding Prometheus as a data source:
 
