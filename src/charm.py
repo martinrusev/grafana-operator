@@ -328,7 +328,8 @@ class GrafanaOperator(CharmBase):
                     'default': 'start',
                     'environment': [
                         {'HTTP_PORT': config["port"]},
-                        {'LOG_LEVEL': config["grafana_log_level"]}
+                        {'LOG_LEVEL': config["grafana_log_level"]},
+                        {'PATHS_PROVISIONING': PROVISIONING_PATH}
                     ]
                 }
             }}
