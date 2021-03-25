@@ -247,8 +247,16 @@ class GrafanaOperator(CharmBase):
             }
             datasources_dict["datasources"].append(source)
 
-        logger.info(datasources_dict)
-        datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "sources.yaml")
+        datasource_dir = os.path.join(PROVISIONING_PATH, "datasources")
+
+        try:
+            os.mkdir(datasource_dir)
+        except OSError:
+            logger.error("Creation of the directory %s failed" % datasource_dir)
+        else:
+            logger.info("Successfully created the directory %s " % datasource_dir)
+
+        datasources_yaml = os.path.join(datasource_dir, "sources.yaml")
         with open(datasources_yaml, 'w+') as file:
             yaml.dump(datasources_dict, file)
 
