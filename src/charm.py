@@ -184,7 +184,7 @@ class GrafanaOperator(CharmBase):
         # check if source-name was not passed or if we have already saved the provided name
         if (
             datasource_fields["source-name"] is None or
-            datasource_fields["source-name"] in self.datastore.source_names
+            datasource_fields["source-name"] in self._stored.source_names
         ):
             default_source_name = "{}_{}".format(event.app.name, event.relation.id)
             logger.warning(
@@ -196,9 +196,9 @@ class GrafanaOperator(CharmBase):
         self._stored.source_names.add(datasource_fields["source-name"])
 
         # set the first grafana-source as the default (needed for pod config)
-        # if `self.datastore.sources` is currently empty, this is the first
+        # if `self._stored.sources` is currently empty, this is the first
         datasource_fields["isDefault"] = "false"
-        if not dict(self.datastore.sources):
+        if not dict(self._stored.sources):
             datasource_fields["isDefault"] = "true"
 
         # add unit name so the source can be removed might be a
@@ -225,7 +225,7 @@ class GrafanaOperator(CharmBase):
         """Remove the grafana-source from the datastore."""
 
         logger.info("Removing all data for relation: {}".format(rel_id))
-        removed_source = self.datastore.sources.pop(rel_id, None)
+        removed_source = self._stored.sources.pop(rel_id, None)
         if removed_source is None:
             logger.warning("Could not remove source for relation: {}".format(rel_id))
         else:
