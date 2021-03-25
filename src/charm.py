@@ -73,9 +73,9 @@ class GrafanaOperator(CharmBase):
         self.framework.observe(
             self.on["grafana-source"].relation_changed, self.on_grafana_source_changed
         )
-        # self.framework.observe(
-        #     self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
-        # )
+        self.framework.observe(
+            self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
+        )
 
         self._stored.set_default(sources=dict())  # available data sources
         self._stored.set_default(source_names=set())  # unique source names
@@ -213,11 +213,17 @@ class GrafanaOperator(CharmBase):
         }
         self._stored.sources.update({event.relation.id: new_source_data})
 
-    def _remove_source_from_datastore(self, rel_id):
-        """Remove the grafana-source from the datastore.
+        self._generate_datasource_config()
 
-        Once removed from the datastore, this datasource will not
-        part of the next pod spec."""
+    def on_grafana_source_broken(self, event):
+        """When a grafana-source is removed, delete from the datastore."""
+        if self.unit.is_leader():
+            self._remove_source_from_datastore(event.relation.id)
+        self._generate_datasource_config()
+
+    def _remove_source_from_datastore(self, rel_id):
+        """Remove the grafana-source from the datastore."""
+
         logger.info("Removing all data for relation: {}".format(rel_id))
         removed_source = self.datastore.sources.pop(rel_id, None)
         if removed_source is None:

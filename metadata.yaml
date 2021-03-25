@@ -20,8 +20,8 @@ containers:
     mounts:
       - storage: sqlitedb
         location: /var/lib/grafana
-      - storage: config
-        location: /etc/grafana
+      - storage: datasources
+        location: /etc/grafana/provisioning/datasources
 provides:
   grafana-source:
     interface: grafana-datasource
@@ -38,9 +38,9 @@ storage:
   sqlitedb:
     type: filesystem
     location: /var/lib/grafana
-  config:
+  datasources:
     type: filesystem
-    location: /etc/grafana
+    location: /etc/grafana/provisioning/datasources
 resources:
   grafana-image:
     type: oci-image
