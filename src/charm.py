@@ -233,22 +233,22 @@ class GrafanaOperator(CharmBase):
             self._stored.sources_to_delete.add(removed_source["source-name"])
 
     def _generate_datasource_config(self):
-        self._stored.sources.update({
-            "prometheus/0": {
-                'private-address': '192.0.2.1',
-                'port': 1234,
-                'source-type': 'prometheus',
-                'source-name': 'prometheus-app',
-                'isDefault': False
-            },
-            "jaeger/0": {
-                'private-address': '255.255.255.0',
-                'port': 7890,
-                'source-type': 'jaeger',
-                'source-name': 'jaeger-app',
-                'isDefault': False
-            }
-        })
+        # self._stored.sources.update({
+        #     "prometheus/0": {
+        #         'private-address': '192.0.2.1',
+        #         'port': 1234,
+        #         'source-type': 'prometheus',
+        #         'source-name': 'prometheus-app',
+        #         'isDefault': False
+        #     },
+        #     "jaeger/0": {
+        #         'private-address': '255.255.255.0',
+        #         'port': 7890,
+        #         'source-type': 'jaeger',
+        #         'source-name': 'jaeger-app',
+        #         'isDefault': False
+        #     }
+        # })
 
         datasources_dict = {
             'apiVersion': 1,
