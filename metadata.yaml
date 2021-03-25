@@ -27,10 +27,6 @@ provides:
     interface: grafana-datasource
   grafana-dashboard:
     interface: grafana-dash
-requires:
-  database:
-    interface: db
-    limit: 1
 peers:
   grafana:
     interface: grafana-peers
