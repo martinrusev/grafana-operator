@@ -1,11 +1,11 @@
 options:
-    port:
-        description: The port grafana will be listening on
-        type: int
-        default: 3000
-    grafana_log_level:
-        type: string
-        description: |
-            Logging level for Grafana. Options are "debug", "info",
-            "warn", "error", and "critical".
-        default: info
+  port:
+    description: The port grafana will be listening on
+    type: int
+    default: 3000
+  grafana_log_level:
+    type: string
+    description: |
+        Logging level for Grafana. Options are "debug", "info",
+        "warn", "error", and "critical".
+    default: info
