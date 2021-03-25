@@ -90,9 +90,9 @@ $ kubectl exec -n grafana grafana-0 -c grafana -- cat /var/log/grafana/grafana.l
 Create and activate a virtualenv with the development requirements:
 
 ```
-    virtualenv -p python3 venv
-    source venv/bin/activate
-    pip install -r requirements-dev.txt
+virtualenv -p python3 venv
+source venv/bin/activate
+pip install -r requirements-dev.txt
 ```
 
 ## Testing
@@ -100,4 +100,6 @@ Create and activate a virtualenv with the development requirements:
 The Python operator framework includes a very nice harness for testing
 operator behaviour without full deployment. Just `run_tests`:
 
-    ./run_tests
+```
+./run_tests
+```
