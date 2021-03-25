@@ -321,12 +321,12 @@ class GrafanaOperator(CharmBase):
                 'grafana': {
                     'override': 'merge',
                     'environment': {
-                        'DATABASE_TYPE': db_config.get("type"),
-                        'DATABASE_HOST': db_config.get("host"),
-                        'DATABASE_NAME': db_config.get("name"),
-                        'DATABASE_USER': db_config.get("user"),
-                        'DATABASE_PASSWORD': db_config.get("password"),
-                        'DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
+                        'GF_DATABASE_TYPE': db_config.get("type"),
+                        'GF_DATABASE_HOST': db_config.get("host"),
+                        'GF_DATABASE_NAME': db_config.get("name"),
+                        'GF_DATABASE_USER': db_config.get("user"),
+                        'GF_DATABASE_PASSWORD': db_config.get("password"),
+                        'GF_DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
                             db_config.get("type"),
                             db_config.get("host"),
                             db_config.get("name"),
@@ -354,9 +354,9 @@ class GrafanaOperator(CharmBase):
                     'command': 'grafana-server > /tmp/grafana.log',
                     'default': 'start',
                     'environment': [
-                        {'HTTP_PORT': config["port"]},
-                        {'LOG_LEVEL': config["grafana_log_level"]},
-                        {'PATHS_PROVISIONING': PROVISIONING_PATH}
+                        {'GF_HTTP_PORT': config["port"]},
+                        {'GF_LOG_LEVEL': config["grafana_log_level"]},
+                        {'GF_PATHS_PROVISIONING': PROVISIONING_PATH}
                     ]
                 }
             }}
