@@ -213,6 +213,19 @@ class GrafanaOperator(CharmBase):
         }
         self._stored.sources.update({event.relation.id: new_source_data})
 
+    def _remove_source_from_datastore(self, rel_id):
+        """Remove the grafana-source from the datastore.
+
+        Once removed from the datastore, this datasource will not
+        part of the next pod spec."""
+        logger.info("Removing all data for relation: {}".format(rel_id))
+        removed_source = self.datastore.sources.pop(rel_id, None)
+        if removed_source is None:
+            logger.warning("Could not remove source for relation: {}".format(rel_id))
+        else:
+            self._stored.source_names.remove(removed_source["source-name"])
+            self._stored.sources_to_delete.add(removed_source["source-name"])
+
     def _generate_datasource_config(self):
         self._stored.sources.update({
             "prometheus/0": {
@@ -233,7 +246,8 @@ class GrafanaOperator(CharmBase):
 
         datasources_dict = {
             'apiVersion': 1,
-            'datasources': []
+            'datasources': [],
+            'deleteDatasources': []
         }
 
         for _, source_info in self._stored.sources.items():
@@ -246,6 +260,13 @@ class GrafanaOperator(CharmBase):
                 'url': "http://{}:{}".format(source_info["private-address"], source_info["port"])
             }
             datasources_dict["datasources"].append(source)
+
+        for name in self._stored.sources_to_delete:
+            source = {
+                'orgId': 1,
+                'name': name
+            }
+            datasources_dict["deleteDatasources"].append(source)
 
         datasource_dir = os.path.join(PROVISIONING_PATH, "datasources")
 
