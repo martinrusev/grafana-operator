@@ -38,11 +38,34 @@ juju deploy cs:~charmed-osm/mariadb-k8s-35
 
 ```
 
-Adding prometheus as a data source:
+Adding Prometheus as a data source:
 
 ```
-juju deploy cs:~charmcraft/prometheus-3
-juju relate grafana prometheus
+$ juju deploy cs:~charmcraft/prometheus-3
+$ juju relate grafana prometheus
+
+
+# The juju model in which grafana is installed corresponds to the k8s namespace
+$ kubectl get pods -n grafana
+
+NAME                           READY   STATUS    RESTARTS   AGE
+modeloperator-89dd64b8-58sbh   1/1     Running   4          2d4h
+prometheus-operator-0          1/1     Running   2          7h31m
+prometheus-0                   1/1     Running   2          7h31m
+grafana-0                      2/2     Running   0          21m
+
+
+$ kubectl exec -n grafana grafana-0 -c grafana -- cat /etc/grafana/provisioning/datasources/datasources.yaml
+
+apiVersion: 1
+datasources:
+- access: proxy
+  isDefault: 'true'
+  name: prometheus_36
+  orgId: '1'
+  type: prometheus
+  url: http://10.152.183.88:9090
+deleteDatasources: []
 ```
 
 ## Debugging
