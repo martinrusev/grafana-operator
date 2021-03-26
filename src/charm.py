@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import yaml
 import os
-from ops.charm import (
-    CharmBase,
-    PebbleReadyEvent
-)
-from ops.main import main
+
+import yaml
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import StoredState
-from ops.model import ActiveStatus
+from ops.main import main
+from ops.model import ActiveStatus, ModelError
 from ops.pebble import ServiceStatus
 
 logger = logging.getLogger(__name__)
@@ -48,17 +46,11 @@ class GrafanaOperator(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.framework.observe(
-            self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
-        )
+        self.framework.observe(self.on.grafana_pebble_ready, self._on_grafana_pebble_ready)
 
         # -- grafana-source relation observations
-        self.framework.observe(
-            self.on["grafana-source"].relation_changed, self.on_grafana_source_changed
-        )
-        self.framework.observe(
-            self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
-        )
+        self.framework.observe(self.on["grafana-source"].relation_changed, self.on_grafana_source_changed)
+        self.framework.observe(self.on["grafana-source"].relation_broken, self.on_grafana_source_broken)
 
         self._stored.set_default(sources=dict())  # available data sources
         self._stored.set_default(source_names=set())  # unique source names
@@ -88,27 +80,17 @@ class GrafanaOperator(CharmBase):
             for field in REQUIRED_DATASOURCE_FIELDS | OPTIONAL_DATASOURCE_FIELDS
         }
 
-        missing_fields = [
-            field
-            for field in REQUIRED_DATASOURCE_FIELDS
-            if datasource_fields.get(field) is None
-        ]
+        missing_fields = [field for field in REQUIRED_DATASOURCE_FIELDS if datasource_fields.get(field) is None]
 
         # check the relation data for missing required fields
         if len(missing_fields) > 0:
-            logger.error(
-                "Missing required data fields for grafana-source "
-                "relation: {}".format(missing_fields)
-            )
+            logger.error("Missing required data fields for grafana-source " "relation: {}".format(missing_fields))
             self._remove_source_from_datastore(event.relation.id)
             return
 
         # specifically handle optional fields if necessary
         # check if source-name was not passed or if we have already saved the provided name
-        if (
-            datasource_fields["source-name"] is None or
-            datasource_fields["source-name"] in self._stored.source_names
-        ):
+        if datasource_fields["source-name"] is None or datasource_fields["source-name"] in self._stored.source_names:
             default_source_name = "{}_{}".format(event.app.name, event.relation.id)
             logger.warning(
                 "No name 'grafana-source' or provided name is already in use. "
@@ -129,11 +111,7 @@ class GrafanaOperator(CharmBase):
         datasource_fields["unit_name"] = event.unit.name
 
         # add the new datasource relation data to the current state
-        new_source_data = {
-            field: value
-            for field, value in datasource_fields.items()
-            if value is not None
-        }
+        new_source_data = {field: value for field, value in datasource_fields.items() if value is not None}
         self._stored.sources.update({event.relation.id: new_source_data})
 
         self._generate_datasource_config()
@@ -156,33 +134,26 @@ class GrafanaOperator(CharmBase):
             self._stored.sources_to_delete.add(removed_source["source-name"])
 
     def _generate_datasource_config(self):
-        datasources_dict = {
-            'apiVersion': 1,
-            'datasources': [],
-            'deleteDatasources': []
-        }
+        datasources_dict = {"apiVersion": 1, "datasources": [], "deleteDatasources": []}
 
         for _, source_info in self._stored.sources.items():
             source = {
-                'orgId': '1',
-                'access': 'proxy',
-                'isDefault': source_info["isDefault"],
-                'name': source_info["source-name"],
-                'type': source_info["source-type"],
-                'url': "http://{}:{}".format(source_info["private-address"], source_info["port"])
+                "orgId": "1",
+                "access": "proxy",
+                "isDefault": source_info["isDefault"],
+                "name": source_info["source-name"],
+                "type": source_info["source-type"],
+                "url": "http://{}:{}".format(source_info["private-address"], source_info["port"]),
             }
             datasources_dict["datasources"].append(source)
 
         for name in self._stored.sources_to_delete:
-            source = {
-                'orgId': 1,
-                'name': name
-            }
+            source = {"orgId": 1, "name": name}
             datasources_dict["deleteDatasources"].append(source)
 
         # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
         datasources_yaml = os.path.join(PROVISIONING_PATH, "datasources", "datasources.yaml")
-        with open(datasources_yaml, 'w+') as file:
+        with open(datasources_yaml, "w+") as file:
             yaml.dump(datasources_dict, file)
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
@@ -190,21 +161,14 @@ class GrafanaOperator(CharmBase):
         logger.info("_on_grafana_pebble_ready")
 
         # Check we can get a list of services back from the Pebble API
-        if container.get_services():
-            # Fetch the service, if it is already running, then return
-            status = container.get_service("grafana")
-            if status.current == ServiceStatus.ACTIVE:
-                logger.info("grafana already started")
-                return
+        if self._is_running(container, "grafana"):
+            logger.info("grafana already started")
+            return
 
         self._generate_datasource_config()
 
         logger.info("_start_grafana")
-        container.add_layer(
-            "grafana",
-            self._grafana_layer(),
-            True
-        )
+        container.add_layer("grafana", self._grafana_layer(), True)
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")
 
@@ -212,23 +176,32 @@ class GrafanaOperator(CharmBase):
         config = self.model.config
 
         layer = {
-            'summary': 'grafana layer',
-            'description': 'grafana layer',
-            'services': {
-                'grafana': {
-                    'override': 'replace',
-                    'summary': 'grafana service',
-                    'command': 'grafana-server',
-                    'default': 'start',
-                    'environment': [
-                        {'GF_HTTP_PORT': config["port"]},
-                        {'GF_LOG_LEVEL': config["grafana_log_level"]},
-                        {'GF_PATHS_PROVISIONING': PROVISIONING_PATH}
-                    ]
+            "summary": "grafana layer",
+            "description": "grafana layer",
+            "services": {
+                "grafana": {
+                    "override": "replace",
+                    "summary": "grafana service",
+                    "command": "grafana-server",
+                    "startup": "enabled",
+                    "environment": [
+                        {"GF_HTTP_PORT": config["port"]},
+                        {"GF_LOG_LEVEL": config["grafana_log_level"]},
+                        {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
+                    ],
                 }
-            }}
+            },
+        }
 
         return layer
+
+    def _is_running(self, container, service):
+        """Helper method to determine if a given service is running in a given container"""
+        try:
+            service = container.get_service(service)
+        except ModelError:
+            return False
+        return service.current == ServiceStatus.ACTIVE
 
 
 if __name__ == "__main__":
