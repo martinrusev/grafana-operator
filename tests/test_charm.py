@@ -11,8 +11,8 @@ from charm import GrafanaOperator
 
 
 BASE_CONFIG = {
-    'port': 3000,
-    'grafana_log_level': 'info',
+    "port": 3000,
+    "grafana_log_level": "info",
 }
 
 # At the moment, the test suite raises an error, due to  https://github.com/canonical/operator/blob/master/ops/testing.py#L838
@@ -20,12 +20,11 @@ BASE_CONFIG = {
 
 
 class GrafanaCharmTest(unittest.TestCase):
-
     def setUp(self) -> None:
         self.harness = Harness(GrafanaOperator)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.harness.add_oci_resource('grafana-image')
+        self.harness.add_oci_resource("grafana-image")
 
     def test__generate_datasource_config(self) -> None:
         pass
