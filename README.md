@@ -6,6 +6,9 @@ This is the Grafana charm for Kubernetes using the Python Operator Framework.
 
 ## Usage
 
+
+### Deploying
+
 ```
 $ git clone https://github.com/martinrusev/grafana-operator
 $ cd grafana-operator
@@ -29,6 +32,8 @@ grafana/0*  active    idle   10.1.243.208         grafana started
 ```
 
 Visit that IP address at port 3000 in your browser and you should see the Grafana web UI. For example, http://10.1.243.208:3000/
+
+### Adding a data source
 
 Adding Prometheus as a data source:
 
@@ -58,6 +63,13 @@ datasources:
   type: prometheus
   url: http://10.152.183.88:9090
 deleteDatasources: []
+```
+
+### Importing dashboards
+
+
+```
+juju run-action --wait grafana/0 import-dashboard dashboard="$(base64 mydashboard.json)"
 ```
 
 ## Debugging

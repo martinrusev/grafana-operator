@@ -22,11 +22,17 @@ containers:
         location: /var/lib/grafana
       - storage: datasources
         location: /etc/grafana/provisioning/datasources
+      - storage: dashboards
+        location: /etc/grafana/provisioning/dashboards
 provides:
   grafana-source:
     interface: grafana-datasource
   grafana-dashboard:
     interface: grafana-dash
+requires:
+  database:
+    interface: db
+    limit: 1
 peers:
   grafana:
     interface: grafana-peers
@@ -37,6 +43,9 @@ storage:
   datasources:
     type: filesystem
     location: /etc/grafana/provisioning/datasources
+  dashboards:
+    type: filesystem
+    location: /etc/grafana/provisioning/dashboards
 resources:
   grafana-image:
     type: oci-image
