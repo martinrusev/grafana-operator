@@ -63,7 +63,6 @@ class GrafanaOperator(CharmBase):
             self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
         )
 
-
         # -- database relation observations
         self.framework.observe(
             self.on["database"].relation_changed, self.on_database_changed
@@ -138,10 +137,8 @@ class GrafanaOperator(CharmBase):
             }
         )
 
-
         self.grafana_container.add_layer("grafana", self._database_layer, True)
         self._restart_grafana()
-
 
     def on_database_broken(self, _):
         """Removes database connection info from datastore.
@@ -274,11 +271,9 @@ class GrafanaOperator(CharmBase):
         with open(datasources_yaml, "w+") as file:
             yaml.dump(datasources_dict, file)
 
-
     def _restart_grafana(self):
         self.grafana_container.stop()
         self.grafana_container.start()
-
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
         container = event.workload
@@ -311,29 +306,30 @@ class GrafanaOperator(CharmBase):
         db_config = self.model.config.get("database", {})
 
         layer = {
-            'summary': 'grafana layer',
-            'description': 'grafana layer',
-            'services': {
-                'grafana': {
-                    'override': 'merge',
-                    'environment': {
-                        'GF_DATABASE_TYPE': db_config.get("type"),
-                        'GF_DATABASE_HOST': db_config.get("host"),
-                        'GF_DATABASE_NAME': db_config.get("name"),
-                        'GF_DATABASE_USER': db_config.get("user"),
-                        'GF_DATABASE_PASSWORD': db_config.get("password"),
-                        'GF_DATABASE_URL': "{0}://{3}:{4}@{1}/{2}".format(
+            "summary": "grafana layer",
+            "description": "grafana layer",
+            "services": {
+                "grafana": {
+                    "override": "merge",
+                    "environment": {
+                        "GF_DATABASE_TYPE": db_config.get("type"),
+                        "GF_DATABASE_HOST": db_config.get("host"),
+                        "GF_DATABASE_NAME": db_config.get("name"),
+                        "GF_DATABASE_USER": db_config.get("user"),
+                        "GF_DATABASE_PASSWORD": db_config.get("password"),
+                        "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
                             db_config.get("type"),
                             db_config.get("host"),
                             db_config.get("name"),
                             db_config.get("user"),
-                            db_config.get("password"))
-                    }
+                            db_config.get("password"),
+                        ),
+                    },
                 }
-            }}
+            },
+        }
 
         return layer
-
 
     def _grafana_layer(self):
         config = self.model.config
