@@ -226,12 +226,15 @@ class GrafanaOperator(CharmBase):
         self._stored.sources.update({event.relation.id: new_source_data})
 
         self._generate_datasource_config()
+        self._restart_grafana()
 
     def on_grafana_source_broken(self, event):
         """When a grafana-source is removed, delete from the datastore."""
         if self.unit.is_leader():
             self._remove_source_from_datastore(event.relation.id)
+
         self._generate_datasource_config()
+        self._restart_grafana()
 
     def _remove_source_from_datastore(self, rel_id):
         """Remove the grafana-source from the datastore."""
@@ -302,6 +305,8 @@ class GrafanaOperator(CharmBase):
             dashboard_string = dashboard_bytes
             json.dump(dashboard_string, file)
 
+        self._restart_grafana()
+
     def _database_layer(self):
         db_config = self.model.config.get("database", {})
 
@@ -342,7 +347,8 @@ class GrafanaOperator(CharmBase):
                     "override": "replace",
                     "summary": "grafana service",
                     "command": "grafana-server",
-                    # "startup": "enabled", # TODO - fix this once this charm is migrated to juju 2.9-rc8
+                    # TODO - fix this once this charm is migrated to juju 2.9-rc8
+                    # "startup": "enabled",
                     "default": "start",
                     "environment": [
                         {"GF_HTTP_PORT": config["port"]},
