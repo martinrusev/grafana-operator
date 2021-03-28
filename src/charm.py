@@ -92,7 +92,7 @@ class GrafanaOperator(CharmBase):
         )
 
         # shortcuts
-        self.grafana_container = self.unit.containers[SERVICE]
+        self.grafana_container = self.unit.get_container(SERVICE)
 
     def on_database_changed(self, event):
         """Sets configuration information for database connection."""
@@ -228,7 +228,7 @@ class GrafanaOperator(CharmBase):
         self._stored.sources.update({event.relation.id: new_source_data})
 
         self._generate_datasource_config()
-        self._restart_grafana(event)
+        self._restart_grafana()
 
     def on_grafana_source_broken(self, event):
         """When a grafana-source is removed, delete from the datastore."""
@@ -236,7 +236,7 @@ class GrafanaOperator(CharmBase):
             self._remove_source_from_datastore(event.relation.id)
 
         self._generate_datasource_config()
-        self._restart_grafana(event)
+        self._restart_grafana()
 
     def _remove_source_from_datastore(self, rel_id):
         """Remove the grafana-source from the datastore."""
@@ -276,10 +276,9 @@ class GrafanaOperator(CharmBase):
         with open(datasources_yaml, "w+") as file:
             yaml.dump(datasources_dict, file)
 
-    def _restart_grafana(self, event):
-        container = event.workload
-        container.stop_services([SERVICE])
-        container.start_services([SERVICE])
+    def _restart_grafana(self):
+        self.grafana_container.stop(SERVICE)
+        self.grafana_container.start(SERVICE)
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
         container = event.workload
@@ -308,7 +307,7 @@ class GrafanaOperator(CharmBase):
             dashboard_string = dashboard_bytes
             json.dump(dashboard_string, file)
 
-        self._restart_grafana(event)
+        self._restart_grafana()
 
     def _database_layer(self):
         db_config = self.model.config.get("database", {})
