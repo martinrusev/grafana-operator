@@ -273,10 +273,12 @@ class GrafanaOperator(CharmBase):
         datasources_yaml = os.path.join(
             PROVISIONING_PATH, "datasources", "datasources.yaml"
         )
+        logger.info("Creating a datasource YAML at: {}".format(datasources_yaml))
         with open(datasources_yaml, "w+") as file:
             yaml.dump(datasources_dict, file)
 
     def _restart_grafana(self):
+        logger.info("Restarting grafana ...")
         self.grafana_container.stop(SERVICE)
         self.grafana_container.start(SERVICE)
 
@@ -296,12 +298,40 @@ class GrafanaOperator(CharmBase):
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")
 
+
+    def _init_dashboard_provisining(self):
+        dashboards_path = os.path.join(PROVISIONING_PATH, "dashboards")
+        dashboards_config = {
+            "apiVersion": 1,
+            "providers": [
+                {
+                    "name": "Default",
+                    "type": "file",
+                    "options": {
+                        "path": dashboards_path
+                    }
+                }
+
+        ]}
+
+        dashboards_yaml = os.path.join(dashboards_path, "default.yaml")
+
+        if not dashboards_yaml.exists():
+            logger.info("Creating the initial Dashboards config")
+            with open(dashboards_yaml, "w+") as file:
+                yaml.dump(dashboards_config, file)
+        else:
+            logger.info("Dashboards config already exists. Skipping")
+
     def on_import_dashboard_action(self, event):
         dasbhoard_base64_string = event.params["dashboard"]
 
         name = "{}.json".format(uuid.uuid4())
 
+        self._init_dashboard_provisining()
         dashboard_path = os.path.join(PROVISIONING_PATH, "dashboards", name)
+
+        logger.info("Newly created dashboard will be saved at: {}".format(dashboard_path))
         with open(dashboard_path, "w+") as file:
             dashboard_bytes = base64.b64decode(dasbhoard_base64_string).decode("ascii")
             dashboard_string = dashboard_bytes
