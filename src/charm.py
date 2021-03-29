@@ -273,7 +273,7 @@ class GrafanaOperator(CharmBase):
         datasources_yaml = os.path.join(
             PROVISIONING_PATH, "datasources", "datasources.yaml"
         )
-        logger.info("Creating a datasource YAML at: {}".format(data))
+        logger.info("Creating a datasource YAML at: {}".format(datasources_yaml))
         with open(datasources_yaml, "w+") as file:
             yaml.dump(datasources_dict, file)
 
