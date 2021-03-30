@@ -12,7 +12,7 @@ from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, ModelError
-from ops.pebble import ServiceStatus
+from ops.pebble import ServiceStatus, Layer
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class GrafanaOperator(CharmBase):
             }
         )
 
-        self.grafana_container.add_layer("grafana", self._database_layer, True)
+        self.grafana_container.add_layer("grafana", self._database_layer, combine=True)
         self._restart_grafana()
 
     def on_database_broken(self, _):
@@ -294,7 +294,7 @@ class GrafanaOperator(CharmBase):
         self._generate_datasource_config()
 
         logger.info("_start_grafana")
-        container.add_layer("grafana", self._grafana_layer(), True)
+        container.add_layer("grafana", self._grafana_layer(), combine=True)
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")
 
@@ -342,54 +342,59 @@ class GrafanaOperator(CharmBase):
     def _database_layer(self):
         db_config = self.model.config.get("database", {})
 
-        layer = {
-            "summary": "grafana layer",
-            "description": "grafana layer",
-            "services": {
-                "grafana": {
-                    "override": "merge",
-                    "environment": {
-                        "GF_DATABASE_TYPE": db_config.get("type"),
-                        "GF_DATABASE_HOST": db_config.get("host"),
-                        "GF_DATABASE_NAME": db_config.get("name"),
-                        "GF_DATABASE_USER": db_config.get("user"),
-                        "GF_DATABASE_PASSWORD": db_config.get("password"),
-                        "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-                            db_config.get("type"),
-                            db_config.get("host"),
-                            db_config.get("name"),
-                            db_config.get("user"),
-                            db_config.get("password"),
-                        ),
-                    },
-                }
-            },
-        }
+        layer = Layer(
+            raw={
+                "summary": "grafana layer",
+                "description": "grafana layer",
+                "services": {
+                    "grafana": {
+                        "override": "merge",
+                        "environment": [
+                            {"GF_DATABASE_TYPE": db_config.get("type")},
+                            {"GF_DATABASE_HOST": db_config.get("host")},
+                            {"GF_DATABASE_NAME": db_config.get("name")},
+                            {"GF_DATABASE_USER": db_config.get("user")},
+                            {"GF_DATABASE_PASSWORD": db_config.get("password")},
+                            {
+                                "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
+                                    db_config.get("type"),
+                                    db_config.get("host"),
+                                    db_config.get("name"),
+                                    db_config.get("user"),
+                                    db_config.get("password"),
+                                )
+                            },
+                        ],
+                    }
+                },
+            }
+        )
 
         return layer
 
     def _grafana_layer(self):
         config = self.model.config
 
-        layer = {
-            "summary": "grafana layer",
-            "description": "grafana layer",
-            "services": {
-                "grafana": {
-                    "override": "replace",
-                    "summary": "grafana service",
-                    "command": "grafana-server",
-                    # TODO - fix this once this charm is migrated to juju 2.9-rc8
-                    # "startup": "enabled",
-                    "default": "start",
-                    "environment": [
-                        {"GF_HTTP_PORT": config["port"]},
-                        {"GF_LOG_LEVEL": config["grafana_log_level"]},
-                        {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
-                    ],
-                }
-            },
-        }
+        layer = Layer(
+            raw={
+                "summary": "grafana layer",
+                "description": "grafana layer",
+                "services": {
+                    "grafana": {
+                        "override": "replace",
+                        "summary": "grafana service",
+                        "command": "grafana-server",
+                        "startup": "enabled",
+                        # Update, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
+                        "environment": [
+                            {"GF_HTTP_PORT": config["port"]},
+                            {"GF_LOG_LEVEL": config["grafana_log_level"]},
+                            {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
+                        ],
+                    }
+                },
+            }
+        )
 
         return layer
 
