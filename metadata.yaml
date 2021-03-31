@@ -30,8 +30,8 @@ provides:
   grafana-dashboard:
     interface: grafana-dash
 requires:
-  database:
-    interface: db
+  db:
+    interface: pgsql
     limit: 1
 peers:
   grafana:

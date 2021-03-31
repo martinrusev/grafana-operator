@@ -8,6 +8,7 @@ import yaml
 import json
 import uuid
 
+import ops
 from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import StoredState
 from ops.main import main
@@ -67,10 +68,10 @@ class GrafanaOperator(CharmBase):
 
         # -- database relation observations
         self.framework.observe(
-            self.on["database"].relation_changed, self.on_database_changed
+            self.on["db"].relation_changed, self.on_database_changed
         )
         self.framework.observe(
-            self.on["database"].relation_broken, self.on_database_broken
+            self.on["db"].relation_broken, self.on_database_broken
         )
 
         # -- grafana-source relation observations
@@ -94,7 +95,7 @@ class GrafanaOperator(CharmBase):
         # shortcuts
         self.grafana_container = self.unit.get_container(SERVICE)
 
-    def on_database_changed(self, event):
+    def on_database_changed(self, event: ops.framework.EventBase):
         """Sets configuration information for database connection."""
         if not self.unit.is_leader():
             return
@@ -155,7 +156,7 @@ class GrafanaOperator(CharmBase):
 
         # TODO - Update Pebble - stop the service, remove the DB credentials?
 
-    def on_grafana_source_changed(self, event):
+    def on_grafana_source_changed(self, event: ops.framework.EventBase):
         """Get relation data for Grafana source.
 
         This event handler (if the unit is the leader) will get data for
@@ -230,7 +231,7 @@ class GrafanaOperator(CharmBase):
         self._generate_datasource_config()
         self._restart_grafana()
 
-    def on_grafana_source_broken(self, event):
+    def on_grafana_source_broken(self, event: ops.framework.EventBase):
         """When a grafana-source is removed, delete from the datastore."""
         if self.unit.is_leader():
             self._remove_source_from_datastore(event.relation.id)
@@ -320,7 +321,7 @@ class GrafanaOperator(CharmBase):
         else:
             logger.info("Dashboards config already exists. Skipping")
 
-    def on_import_dashboard_action(self, event):
+    def on_import_dashboard_action(self, event: ops.framework.EventBase):
         dasbhoard_base64_string = event.params["dashboard"]
 
         name = "{}.json".format(uuid.uuid4())
