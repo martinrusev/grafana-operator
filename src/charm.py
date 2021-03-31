@@ -33,14 +33,12 @@ OPTIONAL_DATASOURCE_FIELDS = {
 }
 
 REQUIRED_DATABASE_FIELDS = {
-    "type",  # mysql, postgres or sqlite3 (sqlite3 doesn't work for HA)
-    "host",  # in the form '<url_or_ip>:<port>', e.g. 127.0.0.1:3306
-    "name",
+    "host",
+    "database",
     "user",
     "password",
 }
 
-VALID_DATABASE_TYPES = {"mysql", "sqlite3"}
 
 CONFIG_PATH = "/etc/grafana/grafana.ini"
 PROVISIONING_PATH = "/etc/grafana/provisioning"
@@ -124,13 +122,6 @@ class GrafanaOperator(CharmBase):
             )
             return
 
-        # check if the passed database type is not in VALID_DATABASE_TYPES
-        if database_fields["type"] not in VALID_DATABASE_TYPES:
-            logger.error(
-                "Grafana can only accept databases of the following "
-                "types: {}".format(VALID_DATABASE_TYPES)
-            )
-            return
 
         # add the new database relation data to the datastore
         self._stored.database.update(
@@ -350,7 +341,7 @@ class GrafanaOperator(CharmBase):
         config_ini = configparser.ConfigParser()
 
         config_ini["database"] = {
-            'type': db_config.get("type"),
+            'type': "mysql",
             'host': db_config.get("host"),
             'name': db_config.get("name"),
             'user': db_config.get("user"),
