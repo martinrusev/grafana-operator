@@ -40,6 +40,9 @@ storage:
   sqlitedb:
     type: filesystem
     location: /var/lib/grafana
+  sqlitedb:
+    type: filesystem
+    location: /var/lib/grafana
   datasources:
     type: filesystem
     location: /etc/grafana/provisioning/datasources

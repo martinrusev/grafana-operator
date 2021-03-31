@@ -7,6 +7,7 @@ import base64
 import yaml
 import json
 import uuid
+import configparser
 
 import ops
 from ops.charm import CharmBase, PebbleReadyEvent
@@ -39,9 +40,9 @@ REQUIRED_DATABASE_FIELDS = {
     "password",
 }
 
-VALID_DATABASE_TYPES = {"mysql", "postgres", "sqlite3"}
+VALID_DATABASE_TYPES = {"mysql", "sqlite3"}
 
-
+CONFIG_PATH = "/etc/grafana/grafana.ini"
 PROVISIONING_PATH = "/etc/grafana/provisioning"
 
 SERVICE = "grafana"
@@ -140,7 +141,9 @@ class GrafanaOperator(CharmBase):
             }
         )
 
-        self.grafana_container.add_layer("grafana", self._database_layer, combine=True)
+        logger.warning("Configuring database settings ...")
+        self._generate_database_config()
+        # self.grafana_container.add_layer("grafana", self._database_layer(), combine=True)
         self._restart_grafana()
 
     def on_database_broken(self, _):
@@ -153,6 +156,7 @@ class GrafanaOperator(CharmBase):
 
         # remove the existing database info from datastore
         self._stored.database = dict()
+        logger.info("Removing the Grafana database backend config")
 
         # TODO - Update Pebble - stop the service, remove the DB credentials?
 
@@ -340,38 +344,54 @@ class GrafanaOperator(CharmBase):
 
         self._restart_grafana()
 
-    def _database_layer(self):
+    def _generate_database_config(self):
         db_config = self.model.config.get("database", {})
 
-        layer = Layer(
-            raw={
-                "summary": "grafana layer",
-                "description": "grafana layer",
-                "services": {
-                    "grafana": {
-                        "override": "merge",
-                        "environment": [
-                            {"GF_DATABASE_TYPE": db_config.get("type")},
-                            {"GF_DATABASE_HOST": db_config.get("host")},
-                            {"GF_DATABASE_NAME": db_config.get("name")},
-                            {"GF_DATABASE_USER": db_config.get("user")},
-                            {"GF_DATABASE_PASSWORD": db_config.get("password")},
-                            {
-                                "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-                                    db_config.get("type"),
-                                    db_config.get("host"),
-                                    db_config.get("name"),
-                                    db_config.get("user"),
-                                    db_config.get("password"),
-                                )
-                            },
-                        ],
-                    }
-                },
-            }
-        )
+        config_ini = configparser.ConfigParser()
 
-        return layer
+        config_ini["database"] = {
+            'type': db_config.get("type"),
+            'host': db_config.get("host"),
+            'name': db_config.get("name"),
+            'user': db_config.get("user"),
+            'password': db_config.get("password")
+        }
+
+        logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
+        with open(CONFIG_PATH, 'w') as f:
+            config_ini.write(f)
+
+        # logger.info("Setting the Grafana Database backend to: {}", db_config.get("type"))
+
+        # layer = Layer(
+        #     raw={
+        #         "summary": "grafana layer",
+        #         "description": "grafana layer",
+        #         "services": {
+        #             "grafana": {
+        #                 "override": "merge",
+        #                 "environment": [
+        #                     {"GF_DATABASE_TYPE": db_config.get("type")},
+        #                     {"GF_DATABASE_HOST": db_config.get("host")},
+        #                     {"GF_DATABASE_NAME": db_config.get("name")},
+        #                     {"GF_DATABASE_USER": db_config.get("user")},
+        #                     {"GF_DATABASE_PASSWORD": db_config.get("password")},
+        #                     {
+        #                         "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
+        #                             db_config.get("type"),
+        #                             db_config.get("host"),
+        #                             db_config.get("name"),
+        #                             db_config.get("user"),
+        #                             db_config.get("password"),
+        #                         )
+        #                     },
+        #                 ],
+        #             }
+        #         },
+        #     }
+        # )
+
+        # return layer
 
     def _grafana_layer(self):
         config = self.model.config
@@ -386,7 +406,7 @@ class GrafanaOperator(CharmBase):
                         "summary": "grafana service",
                         "command": "grafana-server",
                         "startup": "enabled",
-                        # Update, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
+                        # Update the env from list to dict, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
                         "environment": [
                             {"GF_HTTP_PORT": config["port"]},
                             {"GF_LOG_LEVEL": config["grafana_log_level"]},
