@@ -40,18 +40,18 @@ storage:
   sqlitedb:
     type: filesystem
     location: /var/lib/grafana
-  sqlitedb:
-    type: filesystem
-    location: /var/lib/grafana
+    minimum-size: 100M
   datasources:
     type: filesystem
     location: /etc/grafana/provisioning/datasources
+    minimum-size: 200M
   dashboards:
     type: filesystem
     location: /etc/grafana/provisioning/dashboards
+    minimum-size: 200M
 resources:
   grafana-image:
     type: oci-image
     description: Docker image for Grafana
     auto-fetch: true
-    upstream-source: 'grafana/grafana:7.4.5'
+    upstream-source: 'grafana/grafana:7.5.2'

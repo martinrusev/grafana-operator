@@ -10,7 +10,7 @@ import uuid
 # import configparser
 
 import ops
-from ops.charm import CharmBase, PebbleReadyEvent
+from ops.charm import CharmBase, PebbleReadyEvent, ActionEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, ModelError, MaintenanceStatus
@@ -276,9 +276,16 @@ class GrafanaOperator(CharmBase):
 
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
+
+        container = self.unit.get_container(SERVICE)
+
+        container.get_plan().to_yaml()
+        status = container.get_service(SERVICE)
+        if status.current == ServiceStatus.ACTIVE:
+            container.stop(SERVICE)
+
         self.unit.status = MaintenanceStatus("grafana maintenance")
-        self.grafana_container.stop(SERVICE)
-        self.grafana_container.start(SERVICE)
+        container.start(SERVICE)
         self.unit.status = ActiveStatus("grafana restarted")
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
@@ -410,6 +417,13 @@ class GrafanaOperator(CharmBase):
         )
 
         return layer
+
+
+    def _get_plan(self, event: ActionEvent):
+        """Demo action handler that dumps the current Pebble plan into the debug log"""
+        container = self.unit.get_container("jnsgruk")
+        logging.info(container.get_plan())
+        event.set_results({"info": "Plan dumped. Check juju debug-log."})
 
     def _is_running(self, container, service):
         """Helper method to determine if a given service is running in a given container"""
