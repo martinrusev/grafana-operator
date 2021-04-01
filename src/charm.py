@@ -7,13 +7,13 @@ import base64
 import yaml
 import json
 import uuid
-import configparser
+# import configparser
 
 import ops
 from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus, ModelError
+from ops.model import ActiveStatus, ModelError, MaintenanceStatus
 from ops.pebble import ServiceStatus, Layer
 
 logger = logging.getLogger(__name__)
@@ -132,9 +132,10 @@ class GrafanaOperator(CharmBase):
             }
         )
 
-        logger.warning("Configuring database settings ...")
-        self._generate_database_config()
-        # self.grafana_container.add_layer("grafana", self._database_layer(), combine=True)
+        logger.info("Configuring database settings ...")
+        logger.info("Database settings: {}".format(self._stored.database))
+        # self._generate_database_config()
+        self.grafana_container.add_layer("grafana", self._database_layer(), combine=True)
         self._restart_grafana()
 
     def on_database_broken(self, _):
@@ -275,8 +276,10 @@ class GrafanaOperator(CharmBase):
 
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
+        self.unit.status = MaintenanceStatus("grafana maintenance")
         self.grafana_container.stop(SERVICE)
         self.grafana_container.start(SERVICE)
+        self.unit.status = ActiveStatus("grafana restarted")
 
     def _on_grafana_pebble_ready(self, event: PebbleReadyEvent) -> None:
         container = event.workload
@@ -335,54 +338,52 @@ class GrafanaOperator(CharmBase):
 
         self._restart_grafana()
 
-    def _generate_database_config(self):
-        db_config = self.model.config.get("database", {})
+    def _database_layer(self):
+        db_config = self._stored.database
+        # config_ini = configparser.ConfigParser()
 
-        config_ini = configparser.ConfigParser()
+        # config_ini["database"] = {
+        #     'type': "mysql",
+        #     'host': self._stored.database.get("host"),
+        #     'name': db_config.get("database", ""),
+        #     'user': db_config.get("user", ""),
+        #     'password': db_config.get("password", "")
+        # }
 
-        config_ini["database"] = {
-            'type': "mysql",
-            'host': db_config.get("host"),
-            'name': db_config.get("name"),
-            'user': db_config.get("user"),
-            'password': db_config.get("password")
-        }
+        # logger.info("Config set to :{}".format(config_ini))
+        # logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
+        # with open(CONFIG_PATH, 'w') as f:
+        #     config_ini.write(f)
 
-        logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
-        with open(CONFIG_PATH, 'w') as f:
-            config_ini.write(f)
+        layer = Layer(
+            raw={
+                "summary": "grafana layer",
+                "description": "grafana layer",
+                "services": {
+                    "grafana": {
+                        "override": "merge",
+                        "environment": [
+                            {"GF_DATABASE_TYPE": "mysql"},
+                            {"GF_DATABASE_HOST": db_config.get("host")},
+                            {"GF_DATABASE_NAME": db_config.get("database")},
+                            {"GF_DATABASE_USER": db_config.get("user")},
+                            {"GF_DATABASE_PASSWORD": db_config.get("password")},
+                            {
+                                "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
+                                    db_config.get("type"),
+                                    db_config.get("host"),
+                                    db_config.get("database"),
+                                    db_config.get("user"),
+                                    db_config.get("password"),
+                                )
+                            },
+                        ],
+                    }
+                },
+            }
+        )
 
-        # logger.info("Setting the Grafana Database backend to: {}", db_config.get("type"))
-
-        # layer = Layer(
-        #     raw={
-        #         "summary": "grafana layer",
-        #         "description": "grafana layer",
-        #         "services": {
-        #             "grafana": {
-        #                 "override": "merge",
-        #                 "environment": [
-        #                     {"GF_DATABASE_TYPE": db_config.get("type")},
-        #                     {"GF_DATABASE_HOST": db_config.get("host")},
-        #                     {"GF_DATABASE_NAME": db_config.get("name")},
-        #                     {"GF_DATABASE_USER": db_config.get("user")},
-        #                     {"GF_DATABASE_PASSWORD": db_config.get("password")},
-        #                     {
-        #                         "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-        #                             db_config.get("type"),
-        #                             db_config.get("host"),
-        #                             db_config.get("name"),
-        #                             db_config.get("user"),
-        #                             db_config.get("password"),
-        #                         )
-        #                     },
-        #                 ],
-        #             }
-        #         },
-        #     }
-        # )
-
-        # return layer
+        return layer
 
     def _grafana_layer(self):
         config = self.model.config
