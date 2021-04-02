@@ -24,6 +24,8 @@ containers:
         location: /etc/grafana/provisioning/datasources
       - storage: dashboards
         location: /etc/grafana/provisioning/dashboards
+      - storage: config
+        location: /etc/grafana/conf
 provides:
   grafana-source:
     interface: grafana-datasource
@@ -49,6 +51,10 @@ storage:
     type: filesystem
     location: /etc/grafana/provisioning/dashboards
     minimum-size: 200M
+  config:
+    type: filesystem
+    location: /etc/grafana/conf
+    minimum-size: 20M
 resources:
   grafana-image:
     type: oci-image
