@@ -66,12 +66,8 @@ class GrafanaOperator(CharmBase):
         )
 
         # -- database relation observations
-        self.framework.observe(
-            self.on["db"].relation_changed, self.on_database_changed
-        )
-        self.framework.observe(
-            self.on["db"].relation_broken, self.on_database_broken
-        )
+        self.framework.observe(self.on["db"].relation_changed, self.on_database_changed)
+        self.framework.observe(self.on["db"].relation_broken, self.on_database_broken)
 
         # -- grafana-source relation observations
         self.framework.observe(
@@ -81,7 +77,9 @@ class GrafanaOperator(CharmBase):
             self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
         )
 
-        self.framework.observe(self.on['ingress'].relation_changed, self._on_ingress_changed)
+        self.framework.observe(
+            self.on["ingress"].relation_changed, self._on_ingress_changed
+        )
 
         self._stored.set_default(sources=dict())  # available data sources
         self._stored.set_default(source_names=set())  # unique source names
@@ -99,7 +97,9 @@ class GrafanaOperator(CharmBase):
     def _on_ingress_changed(self, event: ops.framework.EventBase):
         """Handle the ingress relation changed event."""
         if self.unit.is_leader():
-            event.relation.data[self.app]["service-hostname"] = self.config["external_hostname"]
+            event.relation.data[self.app]["service-hostname"] = self.config[
+                "external_hostname"
+            ]
             event.relation.data[self.app]["service-name"] = self.model.name
             event.relation.data[self.app]["service-port"] = "80"
 
@@ -130,7 +130,6 @@ class GrafanaOperator(CharmBase):
                 "relation: {}".format(missing_fields)
             )
             return
-
 
         # add the new database relation data to the datastore
         self._stored.database.update(
@@ -357,48 +356,58 @@ class GrafanaOperator(CharmBase):
         db_config = self._stored.database
         config_ini = configparser.ConfigParser()
 
+        db_url = "{0}://{3}:{4}@{1}/{2}".format(
+            db_config.get("type"),
+            db_config.get("host"),
+            db_config.get("database"),
+            db_config.get("user"),
+            db_config.get("password"),
+        )
         config_ini["database"] = {
-            'type': "mysql",
-            'host': self._stored.database.get("host"),
-            'name': db_config.get("database", ""),
-            'user': db_config.get("user", ""),
-            'password': db_config.get("password", "")
+            "type": "mysql",
+            "host": self._stored.database.get("host"),
+            "name": db_config.get("database", ""),
+            "user": db_config.get("user", ""),
+            "password": db_config.get("password", ""),
+            "url": db_url,
         }
 
         logger.info("Config set to :{}".format(config_ini))
         logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
-        with open(CONFIG_PATH, 'w') as f:
+        with open(CONFIG_PATH, "w") as f:
             config_ini.write(f)
 
-        # layer = Layer(
-        #     raw={
-        #         "summary": "grafana layer",
-        #         "description": "grafana layer",
-        #         "services": {
-        #             "grafana": {
-        #                 "override": "merge",
-        #                 "environment": [
-        #                     {"GF_DATABASE_TYPE": "mysql"},
-        #                     {"GF_DATABASE_HOST": db_config.get("host")},
-        #                     {"GF_DATABASE_NAME": db_config.get("database")},
-        #                     {"GF_DATABASE_USER": db_config.get("user")},
-        #                     {"GF_DATABASE_PASSWORD": db_config.get("password")},
-        #                     {
-        #                         "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-        #                             db_config.get("type"),
-        #                             db_config.get("host"),
-        #                             db_config.get("database"),
-        #                             db_config.get("user"),
-        #                             db_config.get("password"),
-        #                         )
-        #                     },
-        #                 ],
-        #             }
-        #         },
-        #     }
-        # )
+    def _database_layer(self):
+        db_config = self._stored.database
+        layer = Layer(
+            raw={
+                "summary": "grafana layer",
+                "description": "grafana layer",
+                "services": {
+                    "grafana": {
+                        "override": "merge",
+                        "environment": [
+                            {"GF_DATABASE_TYPE": "mysql"},
+                            {"GF_DATABASE_HOST": db_config.get("host")},
+                            {"GF_DATABASE_NAME": db_config.get("database")},
+                            {"GF_DATABASE_USER": db_config.get("user")},
+                            {"GF_DATABASE_PASSWORD": db_config.get("password")},
+                            {
+                                "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
+                                    db_config.get("type"),
+                                    db_config.get("host"),
+                                    db_config.get("database"),
+                                    db_config.get("user"),
+                                    db_config.get("password"),
+                                )
+                            },
+                        ],
+                    }
+                },
+            }
+        )
 
-        # return layer
+        return layer
 
     def _grafana_layer(self):
         config = self.model.config
@@ -411,13 +420,14 @@ class GrafanaOperator(CharmBase):
                     "grafana": {
                         "override": "replace",
                         "summary": "grafana service",
-                        "command": "grafana-server -config {}".format(CONFIG_PATH),
+                        "command": "grafana-server",
                         "startup": "enabled",
                         # Update the env from list to dict, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
                         "environment": [
                             {"GF_HTTP_PORT": config["port"]},
                             {"GF_LOG_LEVEL": config["grafana_log_level"]},
                             {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
+                            {"GF_PATHS_CONFIG": CONFIG_PATH}
                         ],
                     }
                 },
@@ -425,7 +435,6 @@ class GrafanaOperator(CharmBase):
         )
 
         return layer
-
 
     def _get_plan(self, event: ActionEvent):
         """Demo action handler that dumps the current Pebble plan into the debug log"""
