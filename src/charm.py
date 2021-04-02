@@ -427,7 +427,7 @@ class GrafanaOperator(CharmBase):
                             {"GF_HTTP_PORT": config["port"]},
                             {"GF_LOG_LEVEL": config["grafana_log_level"]},
                             {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
-                            {"GF_PATHS_CONFIG": CONFIG_PATH}
+                            {"GF_PATHS_CONFIG": CONFIG_PATH},
                         ],
                     }
                 },
