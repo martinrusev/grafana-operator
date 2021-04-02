@@ -81,6 +81,8 @@ class GrafanaOperator(CharmBase):
             self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
         )
 
+        self.framework.observe(self.on['ingress'].relation_changed, self._on_ingress_changed)
+
         self._stored.set_default(sources=dict())  # available data sources
         self._stored.set_default(source_names=set())  # unique source names
         self._stored.set_default(sources_to_delete=set())
@@ -93,6 +95,13 @@ class GrafanaOperator(CharmBase):
 
         # shortcuts
         self.grafana_container = self.unit.get_container(SERVICE)
+
+    def _on_ingress_changed(self, event: ops.framework.EventBase):
+        """Handle the ingress relation changed event."""
+        if self.unit.is_leader():
+            event.relation.data[self.app]["service-hostname"] = self.config["external_hostname"]
+            event.relation.data[self.app]["service-name"] = self.model.name
+            event.relation.data[self.app]["service-port"] = "80"
 
     def on_database_changed(self, event: ops.framework.EventBase):
         """Sets configuration information for database connection."""

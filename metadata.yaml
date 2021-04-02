@@ -31,6 +31,8 @@ provides:
     interface: grafana-datasource
   grafana-dashboard:
     interface: grafana-dash
+  ingress:
+    interface: ingress
 requires:
   db:
     interface: mysql
