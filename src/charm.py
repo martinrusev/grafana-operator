@@ -380,6 +380,8 @@ class GrafanaOperator(CharmBase):
 
     def _database_layer(self):
         db_config = self._stored.database
+        db_type = "mysql"
+
         layer = Layer(
             raw={
                 "summary": "grafana layer",
@@ -388,14 +390,14 @@ class GrafanaOperator(CharmBase):
                     "grafana": {
                         "override": "merge",
                         "environment": [
-                            {"GF_DATABASE_TYPE": "mysql"},
+                            {"GF_DATABASE_TYPE": db_type},
                             {"GF_DATABASE_HOST": db_config.get("host")},
                             {"GF_DATABASE_NAME": db_config.get("database")},
                             {"GF_DATABASE_USER": db_config.get("user")},
                             {"GF_DATABASE_PASSWORD": db_config.get("password")},
                             {
                                 "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-                                    db_config.get("type"),
+                                    db_type,
                                     db_config.get("host"),
                                     db_config.get("database"),
                                     db_config.get("user"),
