@@ -142,7 +142,6 @@ class GrafanaOperator(CharmBase):
 
         logger.info("Configuring database settings ...")
         self._generate_database_config()
-        # self.grafana_container.add_layer("grafana", self._database_layer(), combine=True)
         self._restart_grafana()
 
     def on_database_broken(self, _):
@@ -157,7 +156,8 @@ class GrafanaOperator(CharmBase):
         self._stored.database = dict()
         logger.info("Removing the Grafana database backend config")
 
-        # TODO - Update Pebble - stop the service, remove the DB credentials?
+        with open(CONFIG_PATH,'w'): pass
+        self._restart_grafana()
 
     def on_grafana_source_changed(self, event: ops.framework.EventBase):
         """Get relation data for Grafana source.
@@ -313,7 +313,7 @@ class GrafanaOperator(CharmBase):
         self.unit.status = ActiveStatus("grafana started")
 
     ############################
-    #### DASHBOARD PROVISIONING
+    # DASHBOARD PROVISIONING
     ###########################
     def _init_dashboard_provisining(self):
         dashboards_path = os.path.join(PROVISIONING_PATH, "dashboards")
@@ -355,13 +355,12 @@ class GrafanaOperator(CharmBase):
             json.dump(dashboard_to_dict, file)
 
         self._restart_grafana()
-
     ############################
-    #### DASHBOARD PROVISIONING
+    # DASHBOARD PROVISIONING
     ############################
 
     ########################
-    #### DATABASE RELATIONS
+    # DATABASE RELATIONS
     #######################
     def _generate_init_database_config(self):
         config_ini = configparser.ConfigParser()
@@ -393,41 +392,8 @@ class GrafanaOperator(CharmBase):
         logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
         with open(CONFIG_PATH, "w") as f:
             config_ini.write(f)
-
-    def _database_layer(self):
-        db_config = self._stored.database
-        db_type = "mysql"
-
-        layer = Layer(
-            raw={
-                "summary": "grafana layer",
-                "description": "grafana layer",
-                "services": {
-                    "grafana": {
-                        "override": "merge",
-                        "environment": {
-                            "GF_DATABASE_TYPE": db_type,
-                            "GF_DATABASE_HOST": db_config.get("host"),
-                            "GF_DATABASE_NAME": db_config.get("database"),
-                            "GF_DATABASE_USER": db_config.get("user"),
-                            "GF_DATABASE_PASSWORD": db_config.get("password"),
-                            "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-                                db_type,
-                                db_config.get("host"),
-                                db_config.get("database"),
-                                db_config.get("user"),
-                                db_config.get("password"),
-                            ),
-                        },
-                    }
-                },
-            }
-        )
-
-        return layer
-
     ########################
-    #### DATABASE RELATIONS
+    # DATABASE RELATIONS
     #######################
 
     def _grafana_layer(self):
@@ -441,9 +407,8 @@ class GrafanaOperator(CharmBase):
                     "grafana": {
                         "override": "replace",
                         "summary": "grafana service",
-                        "command": "grafana-server",
+                        "command": "grafana-server -config {}".format(CONFIG_PATH),
                         "startup": "enabled",
-                        # Update the env from list to dict, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
                         "environment": {
                             "GF_HTTP_PORT": config["port"],
                             "GF_LOG_LEVEL": config["grafana_log_level"],
