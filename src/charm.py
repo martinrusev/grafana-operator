@@ -355,16 +355,17 @@ class GrafanaOperator(CharmBase):
     def _generate_database_config(self):
         db_config = self._stored.database
         config_ini = configparser.ConfigParser()
+        db_type = "mysql"
 
         db_url = "{0}://{3}:{4}@{1}/{2}".format(
-            db_config.get("type"),
+            db_type,
             db_config.get("host"),
             db_config.get("database"),
             db_config.get("user"),
             db_config.get("password"),
         )
         config_ini["database"] = {
-            "type": "mysql",
+            "type": db_type,
             "host": self._stored.database.get("host"),
             "name": db_config.get("database", ""),
             "user": db_config.get("user", ""),
