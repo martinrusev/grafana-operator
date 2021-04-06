@@ -305,12 +305,16 @@ class GrafanaOperator(CharmBase):
             return
 
         self._generate_datasource_config()
+        self._generate_init_database_config()
 
         logger.info("_start_grafana")
         container.add_layer("grafana", self._grafana_layer(), combine=True)
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")
 
+    ############################
+    #### DASHBOARD PROVISIONING
+    ###########################
     def _init_dashboard_provisining(self):
         dashboards_path = os.path.join(PROVISIONING_PATH, "dashboards")
         dashboards_config = {
@@ -352,6 +356,18 @@ class GrafanaOperator(CharmBase):
 
         self._restart_grafana()
 
+    ############################
+    #### DASHBOARD PROVISIONING
+    ############################
+
+    ########################
+    #### DATABASE RELATIONS
+    #######################
+    def _generate_init_database_config(self):
+        config_ini = configparser.ConfigParser()
+        with open(CONFIG_PATH, "w") as f:
+            config_ini.write(f)
+
     def _generate_database_config(self):
         db_config = self._stored.database
         config_ini = configparser.ConfigParser()
@@ -389,28 +405,30 @@ class GrafanaOperator(CharmBase):
                 "services": {
                     "grafana": {
                         "override": "merge",
-                        "environment": [
-                            {"GF_DATABASE_TYPE": db_type},
-                            {"GF_DATABASE_HOST": db_config.get("host")},
-                            {"GF_DATABASE_NAME": db_config.get("database")},
-                            {"GF_DATABASE_USER": db_config.get("user")},
-                            {"GF_DATABASE_PASSWORD": db_config.get("password")},
-                            {
-                                "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
-                                    db_type,
-                                    db_config.get("host"),
-                                    db_config.get("database"),
-                                    db_config.get("user"),
-                                    db_config.get("password"),
-                                )
-                            },
-                        ],
+                        "environment": {
+                            "GF_DATABASE_TYPE": db_type,
+                            "GF_DATABASE_HOST": db_config.get("host"),
+                            "GF_DATABASE_NAME": db_config.get("database"),
+                            "GF_DATABASE_USER": db_config.get("user"),
+                            "GF_DATABASE_PASSWORD": db_config.get("password"),
+                            "GF_DATABASE_URL": "{0}://{3}:{4}@{1}/{2}".format(
+                                db_type,
+                                db_config.get("host"),
+                                db_config.get("database"),
+                                db_config.get("user"),
+                                db_config.get("password"),
+                            ),
+                        },
                     }
                 },
             }
         )
 
         return layer
+
+    ########################
+    #### DATABASE RELATIONS
+    #######################
 
     def _grafana_layer(self):
         config = self.model.config
@@ -426,12 +444,11 @@ class GrafanaOperator(CharmBase):
                         "command": "grafana-server",
                         "startup": "enabled",
                         # Update the env from list to dict, once https://github.com/canonical/pebble/commit/52c8d6b3e55ab8574806980aa15c1a719876c69b is part of juju2.9-rcX
-                        "environment": [
-                            {"GF_HTTP_PORT": config["port"]},
-                            {"GF_LOG_LEVEL": config["grafana_log_level"]},
-                            {"GF_PATHS_PROVISIONING": PROVISIONING_PATH},
-                            {"GF_PATHS_CONFIG": CONFIG_PATH},
-                        ],
+                        "environment": {
+                            "GF_HTTP_PORT": config["port"],
+                            "GF_LOG_LEVEL": config["grafana_log_level"],
+                            "GF_PATHS_PROVISIONING": PROVISIONING_PATH,
+                        },
                     }
                 },
             }
