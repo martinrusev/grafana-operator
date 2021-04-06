@@ -107,3 +107,14 @@ operator behaviour without full deployment. Just `run_tests`:
 ```
 ./run_tests
 ```
+
+## Roadmap
+
+The Grafana Charm is still a work in progress.
+
+Here are some of the things coming soon:
+
+  - [ ] Ingress Support
+  - [x] MySQL relation
+  - [x] Prometheus Datasource
+  - [x] Dashboard import action
