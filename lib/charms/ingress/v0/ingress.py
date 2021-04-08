@@ -32,7 +32,8 @@ self.ingress.update_config({"service-hostname": self.config["external_hostname"]
 
 import logging
 
-from ops.framework import EventBase, Object
+from ops.charm import CharmEvents
+from ops.framework import EventBase, EventSource, Object
 from ops.model import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
@@ -43,7 +44,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft push-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,12 @@ OPTIONAL_INGRESS_RELATION_FIELDS = {
 
 class IngressAvailableEvent(EventBase):
     pass
+
+
+class IngressCharmEvents(CharmEvents):
+    """Custom charm events."""
+
+    ingress_available = EventSource(IngressAvailableEvent)
 
 
 class IngressRequires(Object):
