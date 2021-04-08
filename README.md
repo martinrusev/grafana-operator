@@ -99,6 +99,12 @@ source venv/bin/activate
 pip install -r requirements-dev.txt
 ```
 
+To update the ingress library:
+
+```
+charmcraft fetch-lib charms.ingress.v0.ingress
+```
+
 ## Testing
 
 The Python operator framework includes a very nice harness for testing
@@ -115,6 +121,7 @@ The Grafana Charm is still a work in progress.
 Here are some of the things coming soon:
 
   - [ ] Ingress Support
+  - [ ] Import a Custom config file
   - [x] MySQL relation
   - [x] Prometheus Datasource
   - [x] Dashboard import action

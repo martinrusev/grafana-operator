@@ -9,6 +9,8 @@ import json
 import uuid
 import configparser
 
+from charms.ingress.v0.ingress import IngressRequires
+
 import ops
 from ops.charm import CharmBase, PebbleReadyEvent, ActionEvent
 from ops.framework import StoredState
@@ -77,8 +79,13 @@ class GrafanaOperator(CharmBase):
             self.on["grafana-source"].relation_broken, self.on_grafana_source_broken
         )
 
-        self.framework.observe(
-            self.on["ingress"].relation_changed, self._on_ingress_changed
+        self.ingress = IngressRequires(
+            self,
+            {
+                "service-hostname": self.config["external_hostname"],
+                "service-name": self.app.name,
+                "service-port": 80,
+            },
         )
 
         self._stored.set_default(sources=dict())  # available data sources

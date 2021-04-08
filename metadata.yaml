@@ -31,12 +31,12 @@ provides:
     interface: grafana-datasource
   grafana-dashboard:
     interface: grafana-dash
-  ingress:
-    interface: ingress
 requires:
   db:
     interface: mysql
     limit: 1
+  ingress:
+    interface: ingress
 peers:
   grafana:
     interface: grafana-peers
