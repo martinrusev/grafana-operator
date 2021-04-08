@@ -66,6 +66,7 @@ class GrafanaOperator(CharmBase):
         self.framework.observe(
             self.on.grafana_pebble_ready, self._on_grafana_pebble_ready
         )
+        self.framework.observe(self.on.config_changed, self.on_config_changed)
 
         # -- database relation observations
         self.framework.observe(self.on["db"].relation_changed, self.on_database_changed)
@@ -84,7 +85,7 @@ class GrafanaOperator(CharmBase):
             {
                 "service-hostname": self.config["external_hostname"],
                 "service-name": self.app.name,
-                "service-port": 80,
+                "service-port": self.model.config["port"],
             },
         )
 
@@ -101,14 +102,8 @@ class GrafanaOperator(CharmBase):
         # shortcuts
         self.grafana_container = self.unit.get_container(SERVICE)
 
-    def _on_ingress_changed(self, event: ops.framework.EventBase):
-        """Handle the ingress relation changed event."""
-        if self.unit.is_leader():
-            event.relation.data[self.app]["service-hostname"] = self.config[
-                "external_hostname"
-            ]
-            event.relation.data[self.app]["service-name"] = self.model.name
-            event.relation.data[self.app]["service-port"] = "80"
+    def on_config_changed(self, _):
+        self.ingress.update_config({"service-hostname": self.config["external_hostname"]})
 
     def on_database_changed(self, event: ops.framework.EventBase):
         """Sets configuration information for database connection."""
