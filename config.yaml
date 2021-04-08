@@ -9,3 +9,8 @@ options:
         Logging level for Grafana. Options are "debug", "info",
         "warn", "error", and "critical".
     default: info
+  external_hostname:
+    type: string
+    description: >
+      External hostname this grafana app should respond to (required).
+    default: 'foo.internal'
