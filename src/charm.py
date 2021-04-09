@@ -103,7 +103,12 @@ class GrafanaOperator(CharmBase):
         self.grafana_container = self.unit.get_container(SERVICE)
 
     def on_config_changed(self, _):
-        self.ingress.update_config({"service-hostname": self.config["external_hostname"]})
+        self.ingress.update_config(
+            {
+                "service-hostname": self.config["external_hostname"],
+                "service-port": self.model.config["port"],
+            }
+        )
 
     def on_database_changed(self, event: ops.framework.EventBase):
         """Sets configuration information for database connection."""
@@ -158,7 +163,9 @@ class GrafanaOperator(CharmBase):
         self._stored.database = dict()
         logger.info("Removing the Grafana database backend config")
 
-        with open(CONFIG_PATH,'w'): pass
+        # Cleanup the config file
+        with open(CONFIG_PATH, "w"):
+            pass
         self._restart_grafana()
 
     def on_grafana_source_changed(self, event: ops.framework.EventBase):
@@ -357,6 +364,7 @@ class GrafanaOperator(CharmBase):
             json.dump(dashboard_to_dict, file)
 
         self._restart_grafana()
+
     ############################
     # DASHBOARD PROVISIONING
     ############################
@@ -394,6 +402,7 @@ class GrafanaOperator(CharmBase):
         logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
         with open(CONFIG_PATH, "w") as f:
             config_ini.write(f)
+
     ########################
     # DATABASE RELATIONS
     #######################
