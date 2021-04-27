@@ -282,13 +282,15 @@ class GrafanaOperator(CharmBase):
             source = {"orgId": 1, "name": name}
             datasources_dict["deleteDatasources"].append(source)
 
-        # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
-        datasources_yaml = os.path.join(
-            PROVISIONING_PATH, "datasources", "datasources.yaml"
-        )
-        logger.info("Creating a datasource YAML at: {}".format(datasources_yaml))
-        with open(datasources_yaml, "w+") as file:
-            yaml.dump(datasources_dict, file)
+        # # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
+        # datasources_yaml = os.path.join(
+        #     PROVISIONING_PATH, "datasources", "datasources.yaml"
+        # )
+        # logger.info("Creating a datasource YAML at: {}".format(datasources_yaml))
+        # with open(datasources_yaml, "w+") as file:
+        #     yaml.dump(datasources_dict, file)
+
+        return datasources_dict
 
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
@@ -313,7 +315,12 @@ class GrafanaOperator(CharmBase):
             logger.info("grafana already started")
             return
 
-        self._generate_datasource_config()
+        datasource_config = self._generate_datasource_config()
+        datasources_yaml = os.path.join(
+            PROVISIONING_PATH, "datasources", "datasources.yaml"
+        )
+        container.push(datasources_yaml, datasource_config, permissions=0o600)
+
         self._generate_init_database_config()
 
         logger.info("_start_grafana")
