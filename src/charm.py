@@ -262,7 +262,7 @@ class GrafanaOperator(CharmBase):
             self._stored.source_names.remove(removed_source["source-name"])
             self._stored.sources_to_delete.add(removed_source["source-name"])
 
-    def _generate_datasource_config(self):
+    def _generate_datasource_config(self) -> str:
         datasources_dict = {"apiVersion": 1, "datasources": [], "deleteDatasources": []}
 
         for _, source_info in self._stored.sources.items():
@@ -282,15 +282,9 @@ class GrafanaOperator(CharmBase):
             source = {"orgId": 1, "name": name}
             datasources_dict["deleteDatasources"].append(source)
 
-        # # Grafana automatically and recursively reads all YAML files from /etc/grafana/provisioning
-        # datasources_yaml = os.path.join(
-        #     PROVISIONING_PATH, "datasources", "datasources.yaml"
-        # )
-        # logger.info("Creating a datasource YAML at: {}".format(datasources_yaml))
-        # with open(datasources_yaml, "w+") as file:
-        #     yaml.dump(datasources_dict, file)
+        datasources_string  = yaml.dump(datasources_dict)
 
-        return datasources_dict
+        return datasources_string
 
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
@@ -316,10 +310,10 @@ class GrafanaOperator(CharmBase):
             return
 
         datasource_config = self._generate_datasource_config()
-        datasources_yaml = os.path.join(
+        datasources_path = os.path.join(
             PROVISIONING_PATH, "datasources", "datasources.yaml"
         )
-        container.push(datasources_yaml, datasource_config, permissions=0o600)
+        container.push(datasources_path, datasource_config)
 
         self._generate_init_database_config()
 
