@@ -240,7 +240,7 @@ class GrafanaOperator(CharmBase):
         }
         self._stored.sources.update({event.relation.id: new_source_data})
 
-        self._generate_datasource_config()
+        self._update_datasource_config()
         self._restart_grafana()
 
     def on_grafana_source_broken(self, event: ops.framework.EventBase):
@@ -248,7 +248,7 @@ class GrafanaOperator(CharmBase):
         if self.unit.is_leader():
             self._remove_source_from_datastore(event.relation.id)
 
-        self._generate_datasource_config()
+        self._update_datasource_config()
         self._restart_grafana()
 
     def _remove_source_from_datastore(self, rel_id):
@@ -286,6 +286,15 @@ class GrafanaOperator(CharmBase):
 
         return datasources_string
 
+
+    def _update_datasource_config(self):
+        container = self.unit.get_container(SERVICE)
+        datasource_config = self._generate_datasource_config()
+        datasources_path = os.path.join(
+            PROVISIONING_PATH, "datasources", "datasources.yaml"
+        )
+        container.push(datasources_path, datasource_config)
+
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
 
@@ -309,12 +318,7 @@ class GrafanaOperator(CharmBase):
             logger.info("grafana already started")
             return
 
-        datasource_config = self._generate_datasource_config()
-        datasources_path = os.path.join(
-            PROVISIONING_PATH, "datasources", "datasources.yaml"
-        )
-        container.push(datasources_path, datasource_config)
-
+        self._update_datasource_config()
         self._generate_init_database_config()
 
         logger.info("_start_grafana")
