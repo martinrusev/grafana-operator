@@ -8,6 +8,7 @@ import yaml
 import json
 import uuid
 import configparser
+import tempfile
 
 from charms.ingress.v0.ingress import IngressRequires
 
@@ -148,7 +149,7 @@ class GrafanaOperator(CharmBase):
         )
 
         logger.info("Configuring database settings ...")
-        self._generate_database_config()
+        self._update_database_config()
         self._restart_grafana()
 
     def on_database_broken(self, _):
@@ -295,6 +296,12 @@ class GrafanaOperator(CharmBase):
         )
         container.push(datasources_path, datasource_config)
 
+    def _update_database_config(self):
+        container = self.unit.get_container(SERVICE)
+        config = self._generate_database_config()
+
+        container.push(CONFIG_PATH, config)
+
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
 
@@ -378,11 +385,10 @@ class GrafanaOperator(CharmBase):
     # DATABASE RELATIONS
     #######################
     def _generate_init_database_config(self):
-        config_ini = configparser.ConfigParser()
-        with open(CONFIG_PATH, "w") as f:
-            config_ini.write(f)
+        container = self.unit.get_container(SERVICE)
+        container.push(CONFIG_PATH, "")
 
-    def _generate_database_config(self):
+    def _generate_database_config(self) -> str:
         db_config = self._stored.database
         config_ini = configparser.ConfigParser()
         db_type = "mysql"
@@ -405,8 +411,15 @@ class GrafanaOperator(CharmBase):
 
         logger.info("Config set to :{}".format(config_ini))
         logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
-        with open(CONFIG_PATH, "w") as f:
+
+        _, path = tempfile.mkstemp()
+
+        with open(path, "w") as f:
             config_ini.write(f)
+
+        config_ini_str = open(path, 'r').read()
+
+        return config_ini_str
 
     ########################
     # DATABASE RELATIONS
