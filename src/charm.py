@@ -283,10 +283,9 @@ class GrafanaOperator(CharmBase):
             source = {"orgId": 1, "name": name}
             datasources_dict["deleteDatasources"].append(source)
 
-        datasources_string  = yaml.dump(datasources_dict)
+        datasources_string = yaml.dump(datasources_dict)
 
         return datasources_string
-
 
     def _update_datasource_config(self):
         container = self.unit.get_container(SERVICE)
@@ -294,13 +293,7 @@ class GrafanaOperator(CharmBase):
         datasources_path = os.path.join(
             PROVISIONING_PATH, "datasources", "datasources.yaml"
         )
-        container.push(datasources_path, datasource_config)
-
-    def _update_database_config(self):
-        container = self.unit.get_container(SERVICE)
-        config = self._generate_database_config()
-
-        container.push(CONFIG_PATH, config)
+        container.push(datasources_path, datasource_config, make_dirs=True)
 
     def _restart_grafana(self):
         logger.info("Restarting grafana ...")
@@ -337,6 +330,8 @@ class GrafanaOperator(CharmBase):
     # DASHBOARD PROVISIONING
     ###########################
     def _init_dashboard_provisining(self):
+        container = self.unit.get_container(SERVICE)
+
         dashboards_path = os.path.join(PROVISIONING_PATH, "dashboards")
         dashboards_config = {
             "apiVersion": 1,
@@ -349,16 +344,17 @@ class GrafanaOperator(CharmBase):
             ],
         }
 
-        dashboards_yaml = os.path.join(dashboards_path, "default.yaml")
+        dashboards_path = os.path.join(dashboards_path, "default.yaml")
+        dashboards_config_string = yaml.dump(dashboards_config)
 
-        if not os.path.exists(dashboards_yaml):
+        if not os.path.exists(dashboards_path):
             logger.info("Creating the initial Dashboards config")
-            with open(dashboards_yaml, "w+") as file:
-                yaml.dump(dashboards_config, file)
+            container.push(dashboards_path, dashboards_config_string, make_dirs=True)
         else:
             logger.info("Dashboards config already exists. Skipping")
 
     def on_import_dashboard_action(self, event: ops.framework.EventBase):
+        container = self.unit.get_container(SERVICE)
         dasbhoard_base64_string = event.params["dashboard"]
 
         name = "{}.json".format(uuid.uuid4())
@@ -369,11 +365,16 @@ class GrafanaOperator(CharmBase):
         logger.info(
             "Newly created dashboard will be saved at: {}".format(dashboard_path)
         )
-        with open(dashboard_path, "w+") as file:
-            dashboard_bytes = base64.b64decode(dasbhoard_base64_string).decode("ascii")
-            dashboard_string = dashboard_bytes
-            dashboard_to_dict = json.loads(dashboard_string)
-            json.dump(dashboard_to_dict, file)
+
+        dashboard_bytes = base64.b64decode(dasbhoard_base64_string).decode("ascii")
+        dashboard_string = dashboard_bytes
+
+        container.push(dashboard_path, dashboard_string, make_dirs=True)
+        # with open(dashboard_path, "w+") as file:
+        #     dashboard_bytes = base64.b64decode(dasbhoard_base64_string).decode("ascii")
+        #     dashboard_string = dashboard_bytes
+        #     dashboard_to_dict = json.loads(dashboard_string)
+        #     json.dump(dashboard_to_dict, file)
 
         self._restart_grafana()
 
@@ -384,6 +385,12 @@ class GrafanaOperator(CharmBase):
     ########################
     # DATABASE RELATIONS
     #######################
+    def _update_database_config(self):
+        container = self.unit.get_container(SERVICE)
+        config = self._generate_database_config()
+
+        container.push(CONFIG_PATH, config, make_dirs=True)
+
     def _generate_init_database_config(self):
         container = self.unit.get_container(SERVICE)
         container.push(CONFIG_PATH, "")
@@ -417,7 +424,7 @@ class GrafanaOperator(CharmBase):
         with open(path, "w") as f:
             config_ini.write(f)
 
-        config_ini_str = open(path, 'r').read()
+        config_ini_str = open(path, "r").read()
 
         return config_ini_str
 
