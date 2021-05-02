@@ -370,11 +370,6 @@ class GrafanaOperator(CharmBase):
         dashboard_string = dashboard_bytes
 
         container.push(dashboard_path, dashboard_string, make_dirs=True)
-        # with open(dashboard_path, "w+") as file:
-        #     dashboard_bytes = base64.b64decode(dasbhoard_base64_string).decode("ascii")
-        #     dashboard_string = dashboard_bytes
-        #     dashboard_to_dict = json.loads(dashboard_string)
-        #     json.dump(dashboard_to_dict, file)
 
         self._restart_grafana()
 
