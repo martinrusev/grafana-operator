@@ -388,7 +388,7 @@ class GrafanaOperator(CharmBase):
 
     def _generate_init_database_config(self):
         container = self.unit.get_container(SERVICE)
-        container.push(CONFIG_PATH, "")
+        container.push(CONFIG_PATH, "", make_dirs=True)
 
     def _generate_database_config(self) -> str:
         db_config = self._stored.database
