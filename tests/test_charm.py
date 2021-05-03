@@ -58,6 +58,12 @@ class GrafanaCharmTest(unittest.TestCase):
 
     def test__generate_database_config(self) -> None:
         result = self.harness.charm._generate_database_config()
+        self.harness.charm._stored.database = {
+            "host": "localhost",
+            "database": "MYSQL",
+            "user": "u7ser",
+            "password": "password",
+        }
 
         assert result == "false"
 

@@ -403,6 +403,7 @@ class GrafanaOperator(CharmBase):
             db_config.get("user"),
             db_config.get("password"),
         )
+
         config_ini["database"] = {
             "type": db_type,
             "host": self._stored.database.get("host"),
