@@ -10,7 +10,7 @@ import uuid
 import configparser
 import tempfile
 
-from charms.ingress.v0.ingress import IngressRequires
+from lib.charms.ingress.v0.ingress import IngressRequires
 
 import ops
 from ops.charm import CharmBase, PebbleReadyEvent, ActionEvent
