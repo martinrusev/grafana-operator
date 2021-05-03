@@ -56,6 +56,11 @@ class GrafanaCharmTest(unittest.TestCase):
             "deleteDatasources": [],
         }
 
+    def test__generate_database_config(self) -> None:
+        result = self.harness.charm._generate_database_config()
+
+        assert result == "false"
+
     # def test__database_relation_data(self):
     #     self.harness.set_leader(True)
     #     self.harness.update_config(BASE_CONFIG)
