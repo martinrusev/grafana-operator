@@ -164,7 +164,6 @@ class GrafanaOperator(CharmBase):
         self._stored.database = dict()
         logger.info("Removing the Grafana database backend config")
 
-
         # Cleanup the config file
         container = self.unit.get_container(SERVICE)
         container.push(CONFIG_PATH, "", make_dirs=True)
