@@ -3,9 +3,7 @@
 
 import unittest
 
-# from ops.model import (
-#     TooManyRelatedAppsError
-# )
+import yaml
 from ops.testing import Harness
 from charm import GrafanaOperator
 
@@ -15,8 +13,8 @@ BASE_CONFIG = {
     "grafana_log_level": "info",
 }
 
-class GrafanaCharmTest(unittest.TestCase):
 
+class GrafanaCharmTest(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(GrafanaOperator)
         self.addCleanup(self.harness.cleanup)
@@ -24,7 +22,39 @@ class GrafanaCharmTest(unittest.TestCase):
         self.harness.add_oci_resource("grafana-image")
 
     def test__generate_datasource_config(self) -> None:
-        pass
+        result = self.harness.charm._generate_datasource_config()
+        # Initial / Empty
+        assert yaml.safe_load(result) == {
+            "apiVersion": 1,
+            "datasources": [],
+            "deleteDatasources": [],
+        }
+
+        self.harness.charm._stored.sources = {
+            "prom": {
+                "isDefault": True,
+                "source-name": "Prometheus",
+                "source-type": "prom",
+                "private-address": "192.168.0.1",
+                "port": 8000,
+            }
+        }
+
+        result = self.harness.charm._generate_datasource_config()
+        assert yaml.safe_load(result) == {
+            "apiVersion": 1,
+            "datasources": [
+                {
+                    "access": "proxy",
+                    "isDefault": True,
+                    "name": "Prometheus",
+                    "orgId": "1",
+                    "type": "prom",
+                    "url": "http://192.168.0.1:8000",
+                }
+            ],
+            "deleteDatasources": [],
+        }
 
     # def test__database_relation_data(self):
     #     self.harness.set_leader(True)
