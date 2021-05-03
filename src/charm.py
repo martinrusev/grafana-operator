@@ -164,9 +164,11 @@ class GrafanaOperator(CharmBase):
         self._stored.database = dict()
         logger.info("Removing the Grafana database backend config")
 
+
         # Cleanup the config file
-        with open(CONFIG_PATH, "w"):
-            pass
+        container = self.unit.get_container(SERVICE)
+        container.push(CONFIG_PATH, "", make_dirs=True)
+
         self._restart_grafana()
 
     def on_grafana_source_changed(self, event: ops.framework.EventBase):
@@ -327,7 +329,7 @@ class GrafanaOperator(CharmBase):
         self.unit.status = ActiveStatus("grafana started")
 
     ############################
-    # DASHBOARD PROVISIONING
+    # DASHBOARD IMPORT
     ###########################
     def _init_dashboard_provisining(self):
         container = self.unit.get_container(SERVICE)
@@ -374,7 +376,7 @@ class GrafanaOperator(CharmBase):
         self._restart_grafana()
 
     ############################
-    # DASHBOARD PROVISIONING
+    # DASHBOARD IMPORT
     ############################
 
     ########################
@@ -415,7 +417,7 @@ class GrafanaOperator(CharmBase):
         logger.info("Saving the database settings to :{}".format(CONFIG_PATH))
 
         _, path = tempfile.mkstemp()
-
+        # Write the ini config to a temp location. Read it as a string
         with open(path, "w") as f:
             config_ini.write(f)
 
@@ -451,12 +453,6 @@ class GrafanaOperator(CharmBase):
         )
 
         return layer
-
-    def _get_plan(self, event: ActionEvent):
-        """Demo action handler that dumps the current Pebble plan into the debug log"""
-        container = self.unit.get_container("jnsgruk")
-        logging.info(container.get_plan())
-        event.set_results({"info": "Plan dumped. Check juju debug-log."})
 
     def _is_running(self, container, service):
         """Helper method to determine if a given service is running in a given container"""
