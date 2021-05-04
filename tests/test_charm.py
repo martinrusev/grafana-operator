@@ -20,8 +20,10 @@ class GrafanaCharmTest(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.harness.add_oci_resource("grafana-image")
+        self.harness.update_config(BASE_CONFIG)
 
     def test_grafana_layer(self):
+
         expected = {
             "summary": "grafana layer",
             "description": "grafana layer",
@@ -98,40 +100,64 @@ url = mysql://u7ser:password@localhost/MYSQL"""
 
     # def test__database_relation_data(self):
     #     self.harness.set_leader(True)
-    #     self.harness.update_config(BASE_CONFIG)
-    #     self.assertEqual(self.harness.charm.datastore.database, {})
+    #     self.assertEqual(self.harness.charm._stored.database, {})
 
-    #     # add relation and update relation data
     #     rel_id = self.harness.add_relation('database', 'mysql')
     #     rel = self.harness.model.get_relation('database')
     #     self.harness.add_relation_unit(rel_id, 'mysql/0')
     #     test_relation_data = {
     #         'type': 'mysql',
-    #         'host': '0.1.2.3:3306',
+    #         'host': 'localhost:3306',
     #         'name': 'my-test-db',
     #         'user': 'test-user',
-    #         'password': 'super!secret!password',
+    #         'password': 'password',
     #     }
     #     self.harness.update_relation_data(rel_id,
     #                                       'mysql/0',
     #                                       test_relation_data)
-    #     # check that charm datastore was properly set
-    #     self.assertEqual(dict(self.harness.charm.datastore.database),
+    #     self.assertEqual(dict(self.harness.charm._stored.database),
     #                      test_relation_data)
 
     #     # now depart this relation and ensure the datastore is emptied
-    #     self.harness.charm.on.database_relation_broken.emit(rel)
+    #     # self.harness.charm.on.database_relation_broken.emit(rel)
     #     self.assertEqual({}, dict(self.harness.charm.datastore.database))
 
-    # def test__multiple_database_relation_handling(self):
-    #     self.harness.set_leader(True)
-    #     self.harness.update_config(BASE_CONFIG)
-    #     self.assertEqual(self.harness.charm.datastore.database, {})
+    def test__grafana_source_data(self):
+        self.harness.set_leader(True)
+        self.assertEqual(self.harness.charm._stored.sources, {})
 
-    #     # add first database relation
-    #     self.harness.add_relation('database', 'mysql')
+        rel_id = self.harness.add_relation('grafana-source', 'prometheus')
+        self.harness.add_relation_unit(rel_id, 'prometheus/0')
+        self.assertIsInstance(rel_id, int)
 
-    #     # add second database relation -- should fail here
-    #     with self.assertRaises(TooManyRelatedAppsError):
-    #         self.harness.add_relation('database', 'mysql')
-    #         self.harness.charm.model.get_relation('database')
+        # test that the unit data propagates the correct way
+        # which is through the triggering of on_relation_changed
+        self.harness.update_relation_data(rel_id,
+                                          'prometheus/0',
+                                          {
+                                              'private-address': '192.0.2.1',
+                                              'port': 1234,
+                                              'source-type': 'prometheus',
+                                              'source-name': 'prometheus-app',
+                                          })
+
+        expected_first_source_data = {
+            'private-address': '192.0.2.1',
+            'port': 1234,
+            'source-name': 'prometheus-app',
+            'source-type': 'prometheus',
+            'isDefault': 'true',
+            'unit_name': 'prometheus/0'
+        }
+        self.assertEqual(expected_first_source_data,
+                         dict(self.harness.charm.datastore.sources[rel_id]))
+
+        # test that clearing the relation data leads to
+        # the datastore for this data source being cleared
+        self.harness.update_relation_data(rel_id,
+                                          'prometheus/0',
+                                          {
+                                              'private-address': None,
+                                              'port': None,
+                                          })
+        self.assertEqual(None, self.harness.charm.datastore.sources.get(rel_id))
