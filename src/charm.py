@@ -435,23 +435,23 @@ class GrafanaOperator(CharmBase):
     def _grafana_layer(self) -> dict:
         config = self.model.config
 
-        layer ={
-                "summary": "grafana layer",
-                "description": "grafana layer",
-                "services": {
-                    "grafana": {
-                        "override": "replace",
-                        "summary": "grafana service",
-                        "command": "grafana-server -config {}".format(CONFIG_PATH),
-                        "startup": "enabled",
-                        "environment": {
-                            "GF_HTTP_PORT": config["port"],
-                            "GF_LOG_LEVEL": config["grafana_log_level"],
-                            "GF_PATHS_PROVISIONING": PROVISIONING_PATH,
-                        },
-                    }
-                },
-            }
+        layer = {
+            "summary": "grafana layer",
+            "description": "grafana layer",
+            "services": {
+                "grafana": {
+                    "override": "replace",
+                    "summary": "grafana service",
+                    "command": "grafana-server -config {}".format(CONFIG_PATH),
+                    "startup": "enabled",
+                    "environment": {
+                        "GF_HTTP_PORT": config["port"],
+                        "GF_LOG_LEVEL": config["grafana_log_level"],
+                        "GF_PATHS_PROVISIONING": PROVISIONING_PATH,
+                    },
+                }
+            },
+        }
 
         return layer
 
