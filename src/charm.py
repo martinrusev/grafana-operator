@@ -323,7 +323,8 @@ class GrafanaOperator(CharmBase):
         self._generate_init_database_config()
 
         logger.info("_start_grafana")
-        container.add_layer("grafana", self._grafana_layer(), combine=True)
+        layer = Layer(raw=self._grafana_layer())
+        container.add_layer("grafana", layer, combine=True)
         container.autostart()
         self.unit.status = ActiveStatus("grafana started")
 
@@ -421,7 +422,9 @@ class GrafanaOperator(CharmBase):
         with open(path, "w") as f:
             config_ini.write(f)
 
-        config_ini_str = open(path, "r").read()
+        config_ini_str = ""
+        with open(path, "r") as f:
+            config_ini_str = f.read()
 
         return config_ini_str
 
@@ -429,11 +432,10 @@ class GrafanaOperator(CharmBase):
     # DATABASE RELATIONS
     #######################
 
-    def _grafana_layer(self):
+    def _grafana_layer(self) -> dict:
         config = self.model.config
 
-        layer = Layer(
-            raw={
+        layer ={
                 "summary": "grafana layer",
                 "description": "grafana layer",
                 "services": {
@@ -450,7 +452,6 @@ class GrafanaOperator(CharmBase):
                     }
                 },
             }
-        )
 
         return layer
 

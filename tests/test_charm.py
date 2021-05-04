@@ -21,6 +21,27 @@ class GrafanaCharmTest(unittest.TestCase):
         self.harness.begin()
         self.harness.add_oci_resource("grafana-image")
 
+    def test_grafana_layer(self):
+        expected = {
+            "summary": "grafana layer",
+            "description": "grafana layer",
+            "services": {
+                "grafana": {
+                    "override": "replace",
+                    "summary": "grafana service",
+                    "command": "grafana-server -config /etc/grafana/conf/grafana.ini",
+                    "startup": "enabled",
+                    "environment": {
+                        "GF_HTTP_PORT": BASE_CONFIG.get("port"),
+                        "GF_LOG_LEVEL": BASE_CONFIG.get("port"),
+                        "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning",
+                    },
+                }
+            },
+        }
+
+        self.assertEqual(set(self.harness.charm._grafana_layer()), set(expected))
+
     def test__generate_datasource_config(self) -> None:
         result = self.harness.charm._generate_datasource_config()
         # Initial / Empty
@@ -57,15 +78,23 @@ class GrafanaCharmTest(unittest.TestCase):
         }
 
     def test__generate_database_config(self) -> None:
-        result = self.harness.charm._generate_database_config()
         self.harness.charm._stored.database = {
             "host": "localhost",
             "database": "MYSQL",
             "user": "u7ser",
             "password": "password",
         }
+        result = self.harness.charm._generate_database_config()
 
-        assert result == "false"
+        expected_result = """[database]
+type = mysql
+host = localhost
+name = MYSQL
+user = u7ser
+password = password
+url = mysql://u7ser:password@localhost/MYSQL"""
+
+        assert result.rstrip() == expected_result
 
     # def test__database_relation_data(self):
     #     self.harness.set_leader(True)
