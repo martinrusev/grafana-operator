@@ -116,6 +116,8 @@ class GrafanaOperator(CharmBase):
         if not self.unit.is_leader():
             return
 
+
+
         if event.unit is None:
             logger.warning("event unit can't be None when setting db config.")
             return
@@ -138,7 +140,6 @@ class GrafanaOperator(CharmBase):
                 "relation: {}".format(missing_fields)
             )
             return
-
         # add the new database relation data to the datastore
         self._stored.database.update(
             {
