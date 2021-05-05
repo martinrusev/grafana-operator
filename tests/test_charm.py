@@ -116,7 +116,6 @@ url = mysql://u7ser:password@localhost/MYSQL"""
         #   File "ops/testing.py", line 1109, in push
         #     raise NotImplementedError(self.push)
 
-
         # self.harness.update_relation_data(rel_id, "mysql/0", test_relation_data)
         # self.assertEqual(dict(self.harness.charm._stored.database), test_relation_data)
 
